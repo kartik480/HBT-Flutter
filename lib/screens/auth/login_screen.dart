@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/providers/auth_provider.dart';
 import 'package:habit_tracker/screens/auth/register_screen.dart';
 import 'package:habit_tracker/screens/welcome_screen.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,29 +22,18 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   bool _isLoading = false;
   bool _rememberMe = false;
   
-  late AnimationController _mainAnimationController;
-  late AnimationController _formController;
-  
+  late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<Offset> _formSlideAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
-    _startAnimations();
   }
 
   void _initializeAnimations() {
-    _mainAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-    
-    _formController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     
@@ -54,46 +41,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _mainAnimationController,
-      curve: Curves.easeInOut,
+      parent: _fadeController,
+      curve: Curves.easeOut,
     ));
     
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _mainAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _mainAnimationController,
-      curve: Curves.elasticOut,
-    ));
-    
-    _formSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _formController,
-      curve: Curves.easeOutCubic,
-    ));
-  }
-
-  void _startAnimations() {
-    _mainAnimationController.forward();
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _formController.forward();
-    });
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
-    _mainAnimationController.dispose();
-    _formController.dispose();
+    _fadeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -110,56 +67,41 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             colors: AppTheme.auroraGradient,
           ),
         ),
-        child: Stack(
-          children: [
-            // Background removed for cleaner look
-            
-            // Main Content
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 60),
-                          _buildHeader(),
-                          const SizedBox(height: 60),
-                          _buildLoginForm(),
-                          const SizedBox(height: 32),
-                          _buildLoginButton(),
-                          const SizedBox(height: 24),
-                          _buildDivider(),
-                          const SizedBox(height: 24),
-                          _buildSocialLogin(),
-                          const SizedBox(height: 32),
-                          _buildRegisterLink(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 60),
+                  _buildHeader(),
+                  const SizedBox(height: 60),
+                  _buildLoginForm(),
+                  const SizedBox(height: 32),
+                  _buildLoginButton(),
+                  const SizedBox(height: 24),
+                  _buildDivider(),
+                  const SizedBox(height: 24),
+                  _buildSocialLogin(),
+                  const SizedBox(height: 32),
+                  _buildRegisterLink(),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-
-
   Widget _buildHeader() {
     return Column(
       children: [
         Container(
-          width: 140,
-          height: 140,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: AppTheme.fireGradient,
@@ -169,22 +111,15 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.neonPink.withOpacity(0.4),
-                blurRadius: 30,
-                spreadRadius: 10,
-                offset: const Offset(0, 15),
-              ),
-              BoxShadow(
-                color: AppTheme.neonBlue.withOpacity(0.4),
-                blurRadius: 30,
-                spreadRadius: 10,
-                offset: const Offset(0, -15),
+                color: AppTheme.neonPink.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             Icons.track_changes,
-            size: 70,
+            size: 60,
             color: Colors.white,
           ),
         ),
@@ -212,9 +147,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.electricBlue.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: AppTheme.electricBlue.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -232,54 +167,51 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 
   Widget _buildLoginForm() {
-    return SlideTransition(
-      position: _formSlideAnimation,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            _buildGlassmorphicField(
-              controller: _emailController,
-              label: 'Email',
-              hint: 'Enter your email',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            _buildGlassmorphicField(
-              controller: _passwordController,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outline,
-              isPassword: true,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _buildRememberMeAndForgotPassword(),
-          ],
-        ),
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          _buildOptimizedField(
+            controller: _emailController,
+            label: 'Email',
+            hint: 'Enter your email',
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          _buildOptimizedField(
+            controller: _passwordController,
+            label: 'Password',
+            hint: 'Enter your password',
+            icon: Icons.lock_outline,
+            isPassword: true,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 20),
+          _buildRememberMeAndForgotPassword(),
+        ],
       ),
     );
   }
 
-  Widget _buildGlassmorphicField({
+  Widget _buildOptimizedField({
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -290,60 +222,49 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }) {
     return Container(
       decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: isPassword && !_isPasswordVisible,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+          prefixIcon: Icon(icon, color: AppTheme.neonGreen),
+          suffixIcon: isPassword ? IconButton(
+            icon: Icon(
+              _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              color: Colors.white.withOpacity(0.8),
             ),
-            child: TextFormField(
-              controller: controller,
-              keyboardType: keyboardType,
-              obscureText: isPassword && !_isPasswordVisible,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: hint,
-                labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                prefixIcon: Icon(icon, color: AppTheme.neonGreen),
-                suffixIcon: isPassword ? IconButton(
-                  icon: Icon(
-                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
-                ) : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-              ),
-              validator: validator,
-            ),
+            onPressed: () {
+              setState(() {
+                _isPasswordVisible = !_isPasswordVisible;
+              });
+            },
+          ) : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
           ),
         ),
+        validator: validator,
       ),
     );
   }
@@ -423,9 +344,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.neonPink.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppTheme.neonPink.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -550,9 +471,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         gradient: LinearGradient(colors: gradient),
         boxShadow: [
           BoxShadow(
-            color: gradient.first.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: gradient.first.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),

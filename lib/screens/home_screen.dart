@@ -5,13 +5,14 @@ import 'package:habit_tracker/providers/auth_provider.dart';
 import 'package:habit_tracker/widgets/statistics_card.dart';
 import 'package:habit_tracker/widgets/habit_list_tile.dart';
 import 'package:habit_tracker/widgets/category_filter.dart';
+import 'package:habit_tracker/widgets/performance_monitor.dart';
 import 'package:habit_tracker/screens/add_habit_screen.dart';
 import 'package:habit_tracker/screens/analytics_screen.dart';
 import 'package:habit_tracker/screens/auth/login_screen.dart';
+import 'package:habit_tracker/screens/habit_detail_screen.dart';
+import 'package:habit_tracker/screens/settings_screen.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/models/habit.dart';
-
-import 'dart:ui';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,90 +24,87 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _pulseController;
-  late AnimationController _slideController;
+  late AnimationController _refreshController;
   
   late Animation<double> _pulseAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<double> _refreshAnimation;
+  
+  String _searchQuery = '';
+  HabitCategory? _selectedCategory;
+  bool _showCompleted = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _initializeAnimations();
   }
 
   void _initializeAnimations() {
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
-    
-    _slideController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
+    _refreshController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
     _pulseAnimation = Tween<double>(
-      begin: 0.9,
-      end: 1.1,
+      begin: 0.95,
+      end: 1.05,
     ).animate(CurvedAnimation(
       parent: _pulseController,
       curve: Curves.easeInOut,
     ));
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
+    _refreshAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
+      parent: _refreshController,
+      curve: Curves.easeOut,
     ));
 
     _pulseController.repeat(reverse: true);
-    _slideController.forward();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _pulseController.dispose();
-    _slideController.dispose();
+    _refreshController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: AppTheme.auroraGradient,
+    return PerformanceMonitor(
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: AppTheme.auroraGradient,
+            ),
+          ),
+          child: CustomScrollView(
+            slivers: [
+              _buildAppBar(),
+              _buildWelcomeSection(),
+              _buildStatisticsSection(),
+              _buildSearchAndFilterSection(),
+              _buildTabBar(),
+              _buildTabBarView(),
+            ],
           ),
         ),
-        child: Stack(
-          children: [
-            // Background removed for cleaner look
-            
-            // Main Content
-            CustomScrollView(
-              slivers: [
-                _buildAppBar(),
-                _buildWelcomeSection(),
-                _buildStatisticsSection(),
-                _buildTabBar(),
-                _buildTabBarView(),
-              ],
-            ),
-          ],
-        ),
+        floatingActionButton: _buildFloatingActionButton(),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
-
-
 
   Widget _buildAppBar() {
     return SliverAppBar(
@@ -141,18 +139,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
       actions: [
@@ -163,9 +149,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.forestGradient.first.withOpacity(0.4),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: AppTheme.forestGradient.first.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -176,15 +162,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         Container(
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: AppTheme.oceanGradient),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.oceanGradient.first.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed: () => _navigateToSettings(),
+            icon: const Icon(Icons.settings, color: Colors.white),
+            tooltip: 'Settings',
+          ),
+        ),
+        Container(
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: AppTheme.sunsetGradient),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.sunsetGradient.first.withOpacity(0.4),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: AppTheme.sunsetGradient.first.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
@@ -200,122 +205,165 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildWelcomeSection() {
     return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            return Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                gradient: LinearGradient(
-                  colors: AppTheme.cosmicGradient,
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          return Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              gradient: LinearGradient(
+                colors: AppTheme.cosmicGradient,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.cosmicGradient.first.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.cosmicGradient.first.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: AppTheme.fireGradient),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.fireGradient.first.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: AppTheme.fireGradient),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.fireGradient.first.withOpacity(0.4),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.waving_hand,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+                  child: const Icon(
+                    Icons.waving_hand,
+                    color: Colors.white,
+                    size: 30,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome back!',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          authProvider.userName ?? 'Habit Champion',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        authProvider.userName ?? 'Habit Champion',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildMotivationalQuote(),
+                    ],
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMotivationalQuote() {
+    final quotes = [
+      'Every day is a new beginning!',
+      'Small steps lead to big changes!',
+      'Consistency is the key to success!',
+      'You are stronger than you think!',
+      'Progress, not perfection!'
+    ];
+    
+    final randomQuote = quotes[DateTime.now().day % quotes.length];
+    
+    return Text(
+      randomQuote,
+      style: TextStyle(
+        color: Colors.white.withOpacity(0.8),
+        fontSize: 14,
+        fontStyle: FontStyle.italic,
       ),
     );
   }
 
   Widget _buildStatisticsSection() {
     return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Consumer<HabitProvider>(
-          builder: (context, habitProvider, child) {
-            final stats = habitProvider.getStatistics();
-            
-            return Container(
-              margin: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatisticsCard(
-                          title: 'Total Habits',
-                          value: stats['totalHabits'].toString(),
-                          icon: Icons.list_alt,
-                          gradient: AppTheme.auroraGradient,
-                        ),
+      child: Consumer<HabitProvider>(
+        builder: (context, habitProvider, child) {
+          final stats = habitProvider.getStatistics();
+          
+          return Container(
+            margin: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatisticsCard(
+                        title: 'Total Habits',
+                        value: stats['totalHabits'].toString(),
+                        icon: Icons.list_alt,
+                        gradient: AppTheme.auroraGradient,
+                        onTap: () => _tabController.animateTo(1),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatisticsCard(
-                          title: 'Completed',
-                          value: '${stats['completedToday']}/${stats['totalHabits']}',
-                          icon: Icons.check_circle,
-                          gradient: AppTheme.forestGradient,
-                        ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildStatisticsCard(
+                        title: 'Completed',
+                        value: '${stats['completedToday']}/${stats['totalHabits']}',
+                        icon: Icons.check_circle,
+                        gradient: AppTheme.forestGradient,
+                        onTap: () => _tabController.animateTo(0),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildProgressCard(stats),
-                ],
-              ),
-            );
-          },
-        ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatisticsCard(
+                        title: 'Streak',
+                        value: '${stats['longestStreak']} days',
+                        icon: Icons.local_fire_department,
+                        gradient: AppTheme.fireGradient,
+                        onTap: () => _tabController.animateTo(2),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildStatisticsCard(
+                        title: 'Success Rate',
+                        value: '${(stats['overallCompletionRate'] * 100).toInt()}%',
+                        icon: Icons.trending_up,
+                        gradient: AppTheme.oceanGradient,
+                        onTap: () => _navigateToAnalytics(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildProgressCard(stats),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -325,47 +373,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required String value,
     required IconData icon,
     required List<Color> gradient,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: gradient.first.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: Colors.white,
-            size: 32,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.first.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
               color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+              size: 32,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -382,9 +434,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.midnightGradient.first.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppTheme.midnightGradient.first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -414,6 +466,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const Spacer(),
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -427,15 +488,101 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 12),
-          Text(
-            '${(progress * 100).toInt()}% Complete',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Completed: $completedToday',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                'Remaining: ${totalHabits - completedToday}',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterSection() {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Search Bar
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: TextField(
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search habits...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                  prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.8)),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Category Filter
+            CategoryFilter(
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (category) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            // Toggle for completed habits
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Show completed habits',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Switch(
+                  value: _showCompleted,
+                  onChanged: (value) {
+                    setState(() {
+                      _showCompleted = value;
+                    });
+                  },
+                  activeColor: AppTheme.forestGradient.first,
+                  activeTrackColor: AppTheme.forestGradient.first.withOpacity(0.3),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -451,42 +598,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.winterGradient.first.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: AppTheme.winterGradient.first.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(25),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(25),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withOpacity(0.7),
+                indicatorColor: Colors.white,
+                indicatorWeight: 3,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
                 ),
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withOpacity(0.7),
-                  indicatorColor: Colors.white,
-                  indicatorWeight: 3,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 16,
-                  ),
-                  tabs: const [
-                    Tab(text: 'TODAY'),
-                    Tab(text: 'ALL HABITS'),
-                    Tab(text: 'CATEGORIES'),
-                  ],
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
                 ),
+                tabs: const [
+                  Tab(text: 'TODAY'),
+                  Tab(text: 'ALL HABITS'),
+                  Tab(text: 'CATEGORIES'),
+                  Tab(text: 'COMPLETED'),
+                ],
               ),
             ),
           ),
@@ -503,6 +648,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _buildTodayTab(),
           _buildAllHabitsTab(),
           _buildCategoriesTab(),
+          _buildCompletedTab(),
         ],
       ),
     );
@@ -513,29 +659,202 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, habitProvider, child) {
         final todayHabits = habitProvider.getTodayHabits();
         final completedHabits = habitProvider.getCompletedTodayHabits();
+        final filteredTodayHabits = _filterHabits(todayHabits);
+        final filteredCompletedHabits = _filterHabits(completedHabits);
 
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              _refreshController.forward();
+              await Future.delayed(const Duration(milliseconds: 500));
+              _refreshController.reverse();
+            },
+            child: ListView(
+              children: [
+                if (filteredTodayHabits.isNotEmpty) ...[
+                  _buildSectionHeader('PENDING HABITS', AppTheme.fireGradient),
+                  const SizedBox(height: 16),
+                  ...filteredTodayHabits.map((habit) => _buildHabitTile(habit, true)),
+                ],
+                if (filteredCompletedHabits.isNotEmpty && _showCompleted) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionHeader('COMPLETED TODAY', AppTheme.forestGradient),
+                  const SizedBox(height: 16),
+                  ...filteredCompletedHabits.map((habit) => _buildHabitTile(habit, false)),
+                ],
+                if (filteredTodayHabits.isEmpty && filteredCompletedHabits.isEmpty) ...[
+                  _buildEmptyState(),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAllHabitsTab() {
+    return Consumer<HabitProvider>(
+      builder: (context, habitProvider, child) {
+        final allHabits = habitProvider.habits;
+        final filteredHabits = _filterHabits(allHabits);
+        
+        if (filteredHabits.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: ListView.builder(
+            itemCount: filteredHabits.length,
+            itemBuilder: (context, index) {
+              return _buildHabitTile(filteredHabits[index], false);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoriesTab() {
+    return Consumer<HabitProvider>(
+      builder: (context, habitProvider, child) {
+        final categories = HabitCategory.values;
+        
         return Container(
           margin: const EdgeInsets.all(16),
           child: ListView(
             children: [
-              if (todayHabits.isNotEmpty) ...[
-                _buildSectionHeader('PENDING HABITS', AppTheme.fireGradient),
-                const SizedBox(height: 16),
-                ...todayHabits.map((habit) => _buildHabitTile(habit, true)),
-              ],
-              if (completedHabits.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                _buildSectionHeader('COMPLETED TODAY', AppTheme.forestGradient),
-                const SizedBox(height: 16),
-                ...completedHabits.map((habit) => _buildHabitTile(habit, false)),
-              ],
-              if (todayHabits.isEmpty && completedHabits.isEmpty) ...[
-                _buildEmptyState(),
-              ],
+              _buildSectionHeader('HABIT CATEGORIES', AppTheme.auroraGradient),
+              const SizedBox(height: 20),
+              ...categories.map((category) => _buildCategoryCard(category, habitProvider)),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCompletedTab() {
+    return Consumer<HabitProvider>(
+      builder: (context, habitProvider, child) {
+        final allHabits = habitProvider.habits;
+        final completedHabits = allHabits.where((habit) => 
+          habit.completionHistory.isNotEmpty
+        ).toList();
+        final filteredCompletedHabits = _filterHabits(completedHabits);
+        
+        if (filteredCompletedHabits.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: ListView.builder(
+            itemCount: filteredCompletedHabits.length,
+            itemBuilder: (context, index) {
+              return _buildHabitTile(filteredCompletedHabits[index], false);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(HabitCategory category, HabitProvider habitProvider) {
+    final habitsInCategory = habitProvider.getHabitsByCategory(category);
+    final completedToday = habitsInCategory.where((h) => h.isCompletedToday()).length;
+    final total = habitsInCategory.length;
+    final progress = total > 0 ? completedToday / total : 0.0;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: _getCategoryGradient(category)),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _getCategoryGradient(category).first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedCategory = category;
+            });
+            _tabController.animateTo(1);
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Icon(
+                        _getCategoryIcon(category),
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getCategoryName(category),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            '$completedToday of $total completed today',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white.withOpacity(0.7),
+                      size: 20,
+                    ),
+                  ],
+                ),
+                if (total > 0) ...[
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -547,9 +866,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: gradient.first.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: gradient.first.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -567,160 +886,157 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildHabitTile(Habit habit, bool showActions) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.2),
-            Colors.white.withOpacity(0.1),
+    return GestureDetector(
+      onTap: () => _navigateToHabitDetail(habit),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white.withOpacity(0.2),
+              Colors.white.withOpacity(0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: _getCategoryGradient(habit.category)),
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _getCategoryGradient(habit.category).first.withOpacity(0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _getCategoryIcon(habit.category),
-                    color: Colors.white,
-                    size: 24,
-                  ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: _getCategoryGradient(habit.category)),
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _getCategoryGradient(habit.category).first.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        habit.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        habit.description,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.forestGradient.first.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppTheme.forestGradient.first.withOpacity(0.6),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              'Streak: ${habit.currentStreak}',
-                              style: TextStyle(
-                                color: AppTheme.forestGradient.first,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.auroraGradient.first.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: AppTheme.auroraGradient.first.withOpacity(0.6),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              Habit.getFrequencyName(habit.frequency),
-                              style: TextStyle(
-                                color: AppTheme.auroraGradient.first,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  _getCategoryIcon(habit.category),
+                  color: Colors.white,
+                  size: 24,
                 ),
-                if (showActions) ...[
-                  const SizedBox(width: 16),
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _pulseAnimation.value,
-                        child: Container(
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      habit.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      habit.description,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: AppTheme.fireGradient),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.fireGradient.first.withOpacity(0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
+                            color: AppTheme.forestGradient.first.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppTheme.forestGradient.first.withOpacity(0.6),
+                              width: 1,
+                            ),
                           ),
-                          child: IconButton(
-                            onPressed: () => _completeHabit(habit),
-                            icon: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
+                          child: Text(
+                            'Streak: ${habit.currentStreak}',
+                            style: TextStyle(
+                              color: AppTheme.forestGradient.first,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.auroraGradient.first.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppTheme.auroraGradient.first.withOpacity(0.6),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            Habit.getFrequencyName(habit.frequency),
+                            style: TextStyle(
+                              color: AppTheme.auroraGradient.first,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (showActions) ...[
+                const SizedBox(width: 16),
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: AppTheme.fireGradient),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.fireGradient.first.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          onPressed: () => _completeHabit(habit),
+                          icon: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -740,9 +1056,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.cosmicGradient.first.withOpacity(0.4),
-                  blurRadius: 30,
-                  spreadRadius: 10,
+                  color: AppTheme.cosmicGradient.first.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -758,7 +1074,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               colors: AppTheme.fireGradient,
             ).createShader(bounds),
             child: const Text(
-              'No Habits Yet!',
+              'No Habits Found!',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 24,
@@ -768,16 +1084,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 12),
           Text(
-            'Start building your first habit to see it here',
+            'Try adjusting your search or filters',
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 16,
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _navigateToAddHabit(),
+            icon: const Icon(Icons.add),
+            label: const Text('Create New Habit'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.fireGradient.first,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  List<Habit> _filterHabits(List<Habit> habits) {
+    return habits.where((habit) {
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        if (!habit.title.toLowerCase().contains(query) &&
+            !habit.description.toLowerCase().contains(query)) {
+          return false;
+        }
+      }
+      
+      // Category filter
+      if (_selectedCategory != null && habit.category != _selectedCategory) {
+        return false;
+      }
+      
+      return true;
+    }).toList();
   }
 
   List<Color> _getCategoryGradient(HabitCategory category) {
@@ -826,49 +1176,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildAllHabitsTab() {
-    return Consumer<HabitProvider>(
-      builder: (context, habitProvider, child) {
-        final allHabits = habitProvider.habits;
-        
-        if (allHabits.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: ListView.builder(
-            itemCount: allHabits.length,
-            itemBuilder: (context, index) {
-              return _buildHabitTile(allHabits[index], false);
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCategoriesTab() {
-    return Consumer<HabitProvider>(
-      builder: (context, habitProvider, child) {
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionHeader('FILTER BY CATEGORY', AppTheme.auroraGradient),
-              const SizedBox(height: 20),
-              CategoryFilter(
-                selectedCategory: null,
-                onCategorySelected: (category) {
-                  // Handle category selection
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  String _getCategoryName(HabitCategory category) {
+    switch (category) {
+      case HabitCategory.health:
+        return 'Health & Wellness';
+      case HabitCategory.fitness:
+        return 'Fitness & Exercise';
+      case HabitCategory.learning:
+        return 'Learning & Education';
+      case HabitCategory.productivity:
+        return 'Productivity & Work';
+      case HabitCategory.mindfulness:
+        return 'Mindfulness & Spirituality';
+      case HabitCategory.social:
+        return 'Social & Relationships';
+      case HabitCategory.finance:
+        return 'Finance & Money';
+      case HabitCategory.creativity:
+        return 'Creativity & Arts';
+      case HabitCategory.other:
+        return 'Other';
+    }
   }
 
   Widget _buildFloatingActionButton() {
@@ -878,9 +1206,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.fireGradient.first.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppTheme.fireGradient.first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -903,6 +1231,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _completeHabit(Habit habit) {
     final habitProvider = context.read<HabitProvider>();
     habitProvider.markHabitCompleted(habit.id, DateTime.now());
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${habit.title} completed! 🎉'),
+        backgroundColor: AppTheme.successColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   void _navigateToAddHabit() {
@@ -916,6 +1255,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+    );
+  }
+
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+  }
+
+  void _navigateToHabitDetail(Habit habit) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => HabitDetailScreen(habit: habit)),
     );
   }
 
@@ -937,94 +1290,91 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             topRight: Radius.circular(30),
           ),
         ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 60,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: AppTheme.cosmicGradient),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.cosmicGradient.first.withOpacity(0.4),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.cosmicGradient),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.cosmicGradient.first.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  authProvider.userName ?? 'User',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: const Icon(
+                  Icons.person,
+                  color: Colors.white,
+                  size: 40,
                 ),
-                Text(
-                  authProvider.userEmail ?? '',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 16,
-                  ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                authProvider.userName ?? 'User',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: AppTheme.fireGradient),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.fireGradient.first.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    onTap: () {
-                      Navigator.pop(context);
-                      authProvider.logout();
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      );
-                    },
-                    leading: const Icon(Icons.logout, color: Colors.white),
-                    title: const Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+              ),
+              Text(
+                authProvider.userEmail ?? '',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.fireGradient),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.fireGradient.first.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: ListTile(
+                  onTap: () {
+                    Navigator.pop(context);
+                    authProvider.logout();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    );
+                  },
+                  leading: const Icon(Icons.logout, color: Colors.white),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
@@ -1035,7 +1385,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
 
-  _SliverAppBarDelegate(this.child);
+  const _SliverAppBarDelegate(this.child);
 
   @override
   double get minExtent => 60.0;

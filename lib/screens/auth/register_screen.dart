@@ -24,15 +24,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   bool _isLoading = false;
   bool _agreeToTerms = false;
   
-  late AnimationController _animationController;
+  late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     
@@ -40,24 +39,16 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+      parent: _fadeController,
+      curve: Curves.easeOut,
     ));
     
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _animationController.forward();
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _fadeController.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -73,11 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppTheme.secondaryColor.withOpacity(0.1),
-              AppTheme.primaryColor.withOpacity(0.1),
-              AppTheme.accentColor.withOpacity(0.05),
-            ],
+            colors: AppTheme.auroraGradient,
           ),
         ),
         child: SafeArea(
@@ -85,27 +72,20 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             padding: const EdgeInsets.all(24),
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 40),
-                    _buildHeader(),
-                    const SizedBox(height: 40),
-                    _buildRegisterForm(),
-                    const SizedBox(height: 24),
-                    _buildTermsAndConditions(),
-                    const SizedBox(height: 32),
-                    _buildRegisterButton(),
-                    const SizedBox(height: 24),
-                    _buildDivider(),
-                    const SizedBox(height: 24),
-                    _buildSocialRegister(),
-                    const SizedBox(height: 32),
-                    _buildLoginLink(),
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 40),
+                  _buildHeader(),
+                  const SizedBox(height: 40),
+                  _buildRegisterForm(),
+                  const SizedBox(height: 24),
+                  _buildTermsAndConditions(),
+                  const SizedBox(height: 32),
+                  _buildRegisterButton(),
+                  const SizedBox(height: 24),
+                  _buildLoginLink(),
+                ],
               ),
             ),
           ),
@@ -417,87 +397,6 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            color: Colors.grey[300],
-            thickness: 1,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'or sign up with',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-            color: Colors.grey[300],
-            thickness: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSocialRegister() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSocialButton(
-            icon: Icons.g_mobiledata,
-            label: 'Google',
-            color: Colors.red,
-            onPressed: () => _handleSocialRegister('Google'),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSocialButton(
-            icon: Icons.apple,
-            label: 'Apple',
-            color: Colors.black,
-            onPressed: () => _handleSocialRegister('Apple'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSocialButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: color, size: 20),
-        label: Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Colors.grey[300]!),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildLoginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -597,14 +496,5 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         );
       }
     }
-  }
-
-  void _handleSocialRegister(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$provider registration coming soon!'),
-        backgroundColor: AppTheme.primaryColor,
-      ),
-    );
   }
 }

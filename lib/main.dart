@@ -4,8 +4,13 @@ import 'package:habit_tracker/providers/habit_provider.dart';
 import 'package:habit_tracker/providers/auth_provider.dart';
 import 'package:habit_tracker/screens/splash_screen.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
+import 'package:habit_tracker/utils/performance_config.dart';
 
 void main() {
+  // Enable performance optimizations
+  PerformanceConfig.enablePerformanceOptimizations();
+  
+  // Optimize for performance
   runApp(const HabitTrackerApp());
 }
 
@@ -26,6 +31,13 @@ class HabitTrackerApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         home: const SplashScreen(),
+        // Performance optimizations
+        builder: (context, child) {
+          return PerformanceConfig.wrapWithPerformanceOptimizations(child!);
+        },
+        // Additional performance settings
+        debugShowMaterialGrid: false,
+        showSemanticsDebugger: false,
       ),
     );
   }

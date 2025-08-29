@@ -8,6 +8,13 @@ class HabitProvider extends ChangeNotifier {
   List<Habit> _filteredHabits = [];
   HabitCategory? _selectedCategory;
   String _searchQuery = '';
+  
+  // Cache expensive computations
+  Map<String, dynamic>? _cachedStatistics;
+  List<Habit>? _cachedTodayHabits;
+  List<Habit>? _cachedCompletedTodayHabits;
+  DateTime _lastStatisticsUpdate = DateTime.now();
+  DateTime _lastTodayUpdate = DateTime.now();
 
   List<Habit> get habits => _habits;
   List<Habit> get filteredHabits => _filteredHabits;
@@ -29,10 +36,20 @@ class HabitProvider extends ChangeNotifier {
           .toList();
       
       _applyFilters();
+      _clearCache(); // Clear cache when habits change
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading habits: $e');
     }
+  }
+
+  // Clear cached data
+  void _clearCache() {
+    _cachedStatistics = null;
+    _cachedTodayHabits = null;
+    _cachedCompletedTodayHabits = null;
+    _lastStatisticsUpdate = DateTime.now();
+    _lastTodayUpdate = DateTime.now();
   }
 
   // Save habits to SharedPreferences
@@ -54,6 +71,7 @@ class HabitProvider extends ChangeNotifier {
     _habits.add(habit);
     await _saveHabits();
     _applyFilters();
+    _clearCache(); // Clear cache when habits change
     notifyListeners();
   }
 
@@ -64,6 +82,7 @@ class HabitProvider extends ChangeNotifier {
       _habits[index] = habit;
       await _saveHabits();
       _applyFilters();
+      _clearCache(); // Clear cache when habits change
       notifyListeners();
     }
   }
@@ -73,6 +92,7 @@ class HabitProvider extends ChangeNotifier {
     _habits.removeWhere((habit) => habit.id == habitId);
     await _saveHabits();
     _applyFilters();
+    _clearCache(); // Clear cache when habits change
     notifyListeners();
   }
 
@@ -88,6 +108,7 @@ class HabitProvider extends ChangeNotifier {
       
       await _saveHabits();
       _applyFilters();
+      _clearCache(); // Clear cache when habits change
       notifyListeners();
     }
   }
@@ -104,6 +125,7 @@ class HabitProvider extends ChangeNotifier {
       
       await _saveHabits();
       _applyFilters();
+      _clearCache(); // Clear cache when habits change
       notifyListeners();
     }
   }
@@ -137,16 +159,20 @@ class HabitProvider extends ChangeNotifier {
 
   // Set category filter
   void setCategoryFilter(HabitCategory? category) {
-    _selectedCategory = category;
-    _applyFilters();
-    notifyListeners();
+    if (_selectedCategory != category) {
+      _selectedCategory = category;
+      _applyFilters();
+      notifyListeners();
+    }
   }
 
   // Set search query
   void setSearchQuery(String query) {
-    _searchQuery = query;
-    _applyFilters();
-    notifyListeners();
+    if (_searchQuery != query) {
+      _searchQuery = query;
+      _applyFilters();
+      notifyListeners();
+    }
   }
 
   // Apply filters to habits
@@ -176,18 +202,46 @@ class HabitProvider extends ChangeNotifier {
     return _habits.where((habit) => habit.category == category).toList();
   }
 
-  // Get today's habits
+  // Get today's habits with caching
   List<Habit> getTodayHabits() {
-    return _habits.where((habit) => !habit.isCompletedToday()).toList();
+    final now = DateTime.now();
+    if (_cachedTodayHabits != null && 
+        _lastTodayUpdate.day == now.day && 
+        _lastTodayUpdate.month == now.month && 
+        _lastTodayUpdate.year == now.year) {
+      return _cachedTodayHabits!;
+    }
+    
+    _cachedTodayHabits = _habits.where((habit) => !habit.isCompletedToday()).toList();
+    _lastTodayUpdate = now;
+    return _cachedTodayHabits!;
   }
 
-  // Get completed habits for today
+  // Get completed habits for today with caching
   List<Habit> getCompletedTodayHabits() {
-    return _habits.where((habit) => habit.isCompletedToday()).toList();
+    final now = DateTime.now();
+    if (_cachedCompletedTodayHabits != null && 
+        _lastTodayUpdate.day == now.day && 
+        _lastTodayUpdate.month == now.month && 
+        _lastTodayUpdate.year == now.year) {
+      return _cachedCompletedTodayHabits!;
+    }
+    
+    _cachedCompletedTodayHabits = _habits.where((habit) => habit.isCompletedToday()).toList();
+    _lastTodayUpdate = now;
+    return _cachedCompletedTodayHabits!;
   }
 
-  // Get habit statistics
+  // Get habit statistics with caching
   Map<String, dynamic> getStatistics() {
+    final now = DateTime.now();
+    if (_cachedStatistics != null && 
+        _lastStatisticsUpdate.day == now.day && 
+        _lastStatisticsUpdate.month == now.month && 
+        _lastStatisticsUpdate.year == now.year) {
+      return _cachedStatistics!;
+    }
+    
     final totalHabits = _habits.length;
     final completedToday = getCompletedTodayHabits().length;
     final pendingToday = getTodayHabits().length;
@@ -202,7 +256,7 @@ class HabitProvider extends ChangeNotifier {
     final longestStreak = _habits.fold(0, (max, habit) => 
         habit.longestStreak > max ? habit.longestStreak : max);
     
-    return {
+    _cachedStatistics = {
       'totalHabits': totalHabits,
       'completedToday': completedToday,
       'pendingToday': pendingToday,
@@ -210,12 +264,16 @@ class HabitProvider extends ChangeNotifier {
       'totalStreaks': totalStreaks,
       'longestStreak': longestStreak,
     };
+    
+    _lastStatisticsUpdate = now;
+    return _cachedStatistics!;
   }
 
   // Clear all data
   Future<void> clearAllData() async {
     _habits.clear();
     _filteredHabits.clear();
+    _clearCache();
     await _saveHabits();
     notifyListeners();
   }
