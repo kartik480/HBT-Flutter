@@ -90,15 +90,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               colors: AppTheme.auroraGradient,
             ),
           ),
-          child: CustomScrollView(
-            slivers: [
-              _buildAppBar(),
-              _buildWelcomeSection(),
-              _buildStatisticsSection(),
-              _buildSearchAndFilterSection(),
-              _buildTabBar(),
-              _buildTabBarView(),
-            ],
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                _buildAppBar(),
+                _buildWelcomeSection(),
+                _buildStatisticsSection(),
+                _buildSearchAndFilterSection(),
+                _buildTabBar(),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: _buildTabContent(),
+                ),
+              ],
+            ),
           ),
         ),
         floatingActionButton: _buildFloatingActionButton(),
@@ -106,177 +112,178 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+
+
   Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        title: ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            colors: AppTheme.fireGradient,
-          ).createShader(bounds),
-          child: const Text(
-            'HABIT TRACKER',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: 22,
-              letterSpacing: 1.5,
-            ),
-          ),
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.15),
+            Colors.white.withOpacity(0.05),
+          ],
         ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(0.15),
-                Colors.white.withOpacity(0.05),
-              ],
-            ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: AppTheme.fireGradient,
+                  ).createShader(bounds),
+                  child: const Text(
+                    'HABIT TRACKER',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.forestGradient),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.forestGradient.first.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: () => _navigateToAnalytics(),
+                  icon: const Icon(Icons.analytics, color: Colors.white),
+                  tooltip: 'Analytics',
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.oceanGradient),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.oceanGradient.first.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: () => _navigateToSettings(),
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  tooltip: 'Settings',
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.sunsetGradient),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.sunsetGradient.first.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: () => _showProfileMenu(),
+                  icon: const Icon(Icons.account_circle, color: Colors.white),
+                  tooltip: 'Profile',
+                ),
+              ),
+            ],
           ),
         ),
       ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: AppTheme.forestGradient),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.forestGradient.first.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: () => _navigateToAnalytics(),
-            icon: const Icon(Icons.analytics, color: Colors.white),
-            tooltip: 'Analytics',
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: AppTheme.oceanGradient),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.oceanGradient.first.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: () => _navigateToSettings(),
-            icon: const Icon(Icons.settings, color: Colors.white),
-            tooltip: 'Settings',
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: AppTheme.sunsetGradient),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.sunsetGradient.first.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: () => _showProfileMenu(),
-            icon: const Icon(Icons.account_circle, color: Colors.white),
-            tooltip: 'Profile',
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildWelcomeSection() {
-    return SliverToBoxAdapter(
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          return Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25),
-              gradient: LinearGradient(
-                colors: AppTheme.cosmicGradient,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            gradient: LinearGradient(
+              colors: AppTheme.cosmicGradient,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.cosmicGradient.first.withOpacity(0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.cosmicGradient.first.withOpacity(0.2),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: AppTheme.fireGradient),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.fireGradient.first.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: AppTheme.fireGradient),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.fireGradient.first.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.waving_hand,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                child: const Icon(
+                  Icons.waving_hand,
+                  color: Colors.white,
+                  size: 30,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back!',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back!',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        authProvider.userName ?? 'Habit Champion',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      authProvider.userName ?? 'Habit Champion',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(height: 8),
-                      _buildMotivationalQuote(),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMotivationalQuote(),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -302,69 +309,67 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildStatisticsSection() {
-    return SliverToBoxAdapter(
-      child: Consumer<HabitProvider>(
-        builder: (context, habitProvider, child) {
-          final stats = habitProvider.getStatistics();
-          
-          return Container(
-            margin: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatisticsCard(
-                        title: 'Total Habits',
-                        value: stats['totalHabits'].toString(),
-                        icon: Icons.list_alt,
-                        gradient: AppTheme.auroraGradient,
-                        onTap: () => _tabController.animateTo(1),
-                      ),
+    return Consumer<HabitProvider>(
+      builder: (context, habitProvider, child) {
+        final stats = habitProvider.getStatistics();
+        
+        return Container(
+          margin: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatisticsCard(
+                      title: 'Total Habits',
+                      value: stats['totalHabits'].toString(),
+                      icon: Icons.list_alt,
+                      gradient: AppTheme.auroraGradient,
+                      onTap: () => _tabController.animateTo(1),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatisticsCard(
-                        title: 'Completed',
-                        value: '${stats['completedToday']}/${stats['totalHabits']}',
-                        icon: Icons.check_circle,
-                        gradient: AppTheme.forestGradient,
-                        onTap: () => _tabController.animateTo(0),
-                      ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatisticsCard(
+                      title: 'Completed',
+                      value: '${stats['completedToday']}/${stats['totalHabits']}',
+                      icon: Icons.check_circle,
+                      gradient: AppTheme.forestGradient,
+                      onTap: () => _tabController.animateTo(0),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatisticsCard(
-                        title: 'Streak',
-                        value: '${stats['longestStreak']} days',
-                        icon: Icons.local_fire_department,
-                        gradient: AppTheme.fireGradient,
-                        onTap: () => _tabController.animateTo(2),
-                      ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatisticsCard(
+                      title: 'Streak',
+                      value: '${stats['longestStreak']} days',
+                      icon: Icons.local_fire_department,
+                      gradient: AppTheme.fireGradient,
+                      onTap: () => _tabController.animateTo(2),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatisticsCard(
-                        title: 'Success Rate',
-                        value: '${(stats['overallCompletionRate'] * 100).toInt()}%',
-                        icon: Icons.trending_up,
-                        gradient: AppTheme.oceanGradient,
-                        onTap: () => _navigateToAnalytics(),
-                      ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStatisticsCard(
+                      title: 'Success Rate',
+                      value: '${(stats['overallCompletionRate'] * 100).toInt()}%',
+                      icon: Icons.trending_up,
+                      gradient: AppTheme.oceanGradient,
+                      onTap: () => _navigateToAnalytics(),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildProgressCard(stats),
-              ],
-            ),
-          );
-        },
-      ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildProgressCard(stats),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -515,142 +520,133 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildSearchAndFilterSection() {
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Search Bar
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search habits...',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                  prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.8)),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                ),
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Search Bar
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
               ),
             ),
-            const SizedBox(height: 16),
-            // Category Filter
-            CategoryFilter(
-              selectedCategory: _selectedCategory,
-              onCategorySelected: (category) {
+            child: TextField(
+              onChanged: (value) {
                 setState(() {
-                  _selectedCategory = category;
+                  _searchQuery = value;
                 });
               },
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search habits...',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.8)),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              ),
             ),
-            const SizedBox(height: 16),
-            // Toggle for completed habits
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Show completed habits',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+          ),
+          const SizedBox(height: 16),
+          // Category Filter
+          CategoryFilter(
+            selectedCategory: _selectedCategory,
+            onCategorySelected: (category) {
+              setState(() {
+                _selectedCategory = category;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          // Toggle for completed habits
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Show completed habits',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
-                Switch(
-                  value: _showCompleted,
-                  onChanged: (value) {
-                    setState(() {
-                      _showCompleted = value;
-                    });
-                  },
-                  activeColor: AppTheme.forestGradient.first,
-                  activeTrackColor: AppTheme.forestGradient.first.withOpacity(0.3),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+              Switch(
+                value: _showCompleted,
+                onChanged: (value) {
+                  setState(() {
+                    _showCompleted = value;
+                  });
+                },
+                activeColor: AppTheme.forestGradient.first,
+                activeTrackColor: AppTheme.forestGradient.first.withOpacity(0.3),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTabBar() {
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _SliverAppBarDelegate(
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: AppTheme.winterGradient),
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.winterGradient.first.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: AppTheme.winterGradient),
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.winterGradient.first.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          child: ClipRRect(
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(25),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white.withOpacity(0.7),
-                indicatorColor: Colors.white,
-                indicatorWeight: 3,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
-                ),
-                tabs: const [
-                  Tab(text: 'TODAY'),
-                  Tab(text: 'ALL HABITS'),
-                  Tab(text: 'CATEGORIES'),
-                  Tab(text: 'COMPLETED'),
-                ],
-              ),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withOpacity(0.7),
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.tab,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
             ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
+            ),
+            tabs: const [
+              Tab(text: 'TODAY'),
+              Tab(text: 'ALL HABITS'),
+              Tab(text: 'CATEGORIES'),
+              Tab(text: 'COMPLETED'),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTabBarView() {
-    return SliverFillRemaining(
-      child: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTodayTab(),
-          _buildAllHabitsTab(),
-          _buildCategoriesTab(),
-          _buildCompletedTab(),
-        ],
-      ),
+  Widget _buildTabContent() {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildTodayTab(),
+        _buildAllHabitsTab(),
+        _buildCategoriesTab(),
+        _buildCompletedTab(),
+      ],
     );
   }
 
@@ -671,6 +667,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               _refreshController.reverse();
             },
             child: ListView(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
               children: [
                 if (filteredTodayHabits.isNotEmpty) ...[
                   _buildSectionHeader('PENDING HABITS', AppTheme.fireGradient),
@@ -707,6 +705,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Container(
           margin: const EdgeInsets.all(16),
           child: ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
             itemCount: filteredHabits.length,
             itemBuilder: (context, index) {
               return _buildHabitTile(filteredHabits[index], false);
@@ -725,6 +725,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Container(
           margin: const EdgeInsets.all(16),
           child: ListView(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
             children: [
               _buildSectionHeader('HABIT CATEGORIES', AppTheme.auroraGradient),
               const SizedBox(height: 20),
@@ -752,6 +754,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return Container(
           margin: const EdgeInsets.all(16),
           child: ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
             itemCount: filteredCompletedHabits.length,
             itemBuilder: (context, index) {
               return _buildHabitTile(filteredCompletedHabits[index], false);
@@ -1382,24 +1386,4 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
 
-  const _SliverAppBarDelegate(this.child);
-
-  @override
-  double get minExtent => 60.0;
-
-  @override
-  double get maxExtent => 60.0;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox.expand(child: child);
-  }
-
-  @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return false;
-  }
-}
