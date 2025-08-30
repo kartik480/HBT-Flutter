@@ -13,6 +13,7 @@ import 'package:habit_tracker/screens/auth/login_screen.dart';
 import 'package:habit_tracker/screens/habit_detail_screen.dart';
 import 'package:habit_tracker/screens/settings_screen.dart';
 import 'package:habit_tracker/screens/reminders_screen.dart';
+import 'package:habit_tracker/screens/ai_chat_screen.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/models/habit.dart';
 
@@ -105,6 +106,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         floatingActionButton: _buildFloatingActionButton(),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
@@ -1294,31 +1296,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: AppTheme.fireGradient),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.fireGradient.first.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // AI Teacher Button
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: AppTheme.cosmicGradient),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.cosmicGradient.first.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: FloatingActionButton.extended(
-        onPressed: () => _navigateToAddHabit(),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Add Habit',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
+          child: FloatingActionButton(
+            onPressed: () => _navigateToAIChat(),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: const Icon(Icons.psychology, color: Colors.white, size: 28),
           ),
         ),
-      ),
+        // Add Habit Button
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: AppTheme.fireGradient),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.fireGradient.first.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: FloatingActionButton.extended(
+            onPressed: () => _navigateToAddHabit(),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text(
+              'Add Habit',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1363,6 +1392,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const RemindersScreen()),
+    );
+  }
+
+  void _navigateToAIChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AIChatScreen()),
     );
   }
 

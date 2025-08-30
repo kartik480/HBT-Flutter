@@ -1,0 +1,11 @@
+# Essential packages for AI Teacher Server
+fastapi>=0.68.0
+uvicorn>=0.15.0
+requests>=2.25.0
+pydantic>=1.8.0
+python-multipart>=0.0.5
+
+# Optional: Add these if you want full ML capabilities
+# numpy>=1.21.0
+# pandas>=1.3.0
+# scikit-learn>=1.0.0
