@@ -22,7 +22,12 @@ class HabitProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
 
   HabitProvider() {
-    _loadHabits();
+    _loadHabits().then((_) {
+      // Add sample habits if none exist
+      if (_habits.isEmpty) {
+        addSampleHabits();
+      }
+    });
   }
 
   // Load habits from SharedPreferences
@@ -275,6 +280,119 @@ class HabitProvider extends ChangeNotifier {
     _filteredHabits.clear();
     _clearCache();
     await _saveHabits();
+    notifyListeners();
+  }
+
+  // Add sample habits for demonstration
+  Future<void> addSampleHabits() async {
+    if (_habits.isNotEmpty) return; // Only add if no habits exist
+    
+    final sampleHabits = [
+      Habit(
+        id: 'sample_1',
+        title: 'Morning Exercise',
+        description: 'Start the day with 30 minutes of exercise',
+        category: HabitCategory.fitness,
+        frequency: HabitFrequency.daily,
+        targetCount: 1,
+        reminderTime: const TimeOfDay(hour: 8, minute: 0),
+        createdAt: DateTime.now().subtract(const Duration(days: 7)),
+        currentStreak: 5,
+        longestStreak: 12,
+        color: Colors.blue,
+        completionHistory: {
+          DateTime.now().subtract(const Duration(days: 1)): true,
+          DateTime.now().subtract(const Duration(days: 2)): true,
+          DateTime.now().subtract(const Duration(days: 3)): true,
+          DateTime.now().subtract(const Duration(days: 4)): true,
+          DateTime.now().subtract(const Duration(days: 5)): true,
+        },
+      ),
+      Habit(
+        id: 'sample_2',
+        title: 'Read 20 Pages',
+        description: 'Read at least 20 pages of a book daily',
+        category: HabitCategory.learning,
+        frequency: HabitFrequency.daily,
+        targetCount: 20,
+        reminderTime: const TimeOfDay(hour: 21, minute: 0),
+        createdAt: DateTime.now().subtract(const Duration(days: 14)),
+        currentStreak: 8,
+        longestStreak: 25,
+        color: Colors.green,
+        completionHistory: {
+          DateTime.now().subtract(const Duration(days: 1)): true,
+          DateTime.now().subtract(const Duration(days: 2)): true,
+          DateTime.now().subtract(const Duration(days: 3)): true,
+          DateTime.now().subtract(const Duration(days: 4)): true,
+          DateTime.now().subtract(const Duration(days: 5)): true,
+          DateTime.now().subtract(const Duration(days: 6)): true,
+          DateTime.now().subtract(const Duration(days: 7)): true,
+          DateTime.now().subtract(const Duration(days: 8)): true,
+        },
+      ),
+      Habit(
+        id: 'sample_3',
+        title: 'Drink 8 Glasses of Water',
+        description: 'Stay hydrated by drinking 8 glasses of water',
+        category: HabitCategory.health,
+        frequency: HabitFrequency.daily,
+        targetCount: 8,
+        reminderTime: const TimeOfDay(hour: 18, minute: 0),
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        currentStreak: 2,
+        longestStreak: 2,
+        color: Colors.red,
+        completionHistory: {
+          DateTime.now().subtract(const Duration(days: 1)): true,
+          DateTime.now().subtract(const Duration(days: 2)): true,
+        },
+      ),
+      Habit(
+        id: 'sample_4',
+        title: 'Practice Guitar',
+        description: 'Practice guitar for 30 minutes',
+        category: HabitCategory.creativity,
+        frequency: HabitFrequency.weekly,
+        targetCount: 30,
+        reminderTime: const TimeOfDay(hour: 19, minute: 0),
+        createdAt: DateTime.now().subtract(const Duration(days: 21)),
+        currentStreak: 3,
+        longestStreak: 8,
+        color: Colors.purple,
+        completionHistory: {
+          DateTime.now().subtract(const Duration(days: 7)): true,
+          DateTime.now().subtract(const Duration(days: 14)): true,
+          DateTime.now().subtract(const Duration(days: 21)): true,
+        },
+      ),
+      Habit(
+        id: 'sample_5',
+        title: 'Meditation',
+        description: 'Practice mindfulness meditation for 15 minutes',
+        category: HabitCategory.mindfulness,
+        frequency: HabitFrequency.daily,
+        targetCount: 15,
+        reminderTime: const TimeOfDay(hour: 7, minute: 0),
+        createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        currentStreak: 3,
+        longestStreak: 15,
+        color: Colors.orange,
+        completionHistory: {
+          DateTime.now().subtract(const Duration(days: 1)): true,
+          DateTime.now().subtract(const Duration(days: 2)): true,
+          DateTime.now().subtract(const Duration(days: 3)): true,
+        },
+      ),
+    ];
+    
+    for (final habit in sampleHabits) {
+      _habits.add(habit);
+    }
+    
+    await _saveHabits();
+    _applyFilters();
+    _clearCache();
     notifyListeners();
   }
 }

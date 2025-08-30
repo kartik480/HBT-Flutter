@@ -6,6 +6,7 @@ import 'package:habit_tracker/widgets/statistics_card.dart';
 import 'package:habit_tracker/widgets/habit_list_tile.dart';
 import 'package:habit_tracker/widgets/category_filter.dart';
 import 'package:habit_tracker/widgets/performance_monitor.dart';
+import 'package:habit_tracker/widgets/habit_list_box.dart';
 import 'package:habit_tracker/screens/add_habit_screen.dart';
 import 'package:habit_tracker/screens/analytics_screen.dart';
 import 'package:habit_tracker/screens/auth/login_screen.dart';
@@ -90,21 +91,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               colors: AppTheme.auroraGradient,
             ),
           ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                _buildAppBar(),
-                _buildWelcomeSection(),
-                _buildStatisticsSection(),
-                _buildSearchAndFilterSection(),
-                _buildTabBar(),
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: _buildTabContent(),
-                ),
-              ],
-            ),
+          child: Column(
+            children: [
+              // Fixed header sections
+              _buildAppBar(),
+              _buildTabBar(),
+              // Tab content with proper height
+              Expanded(
+                child: _buildTabContent(),
+              ),
+            ],
           ),
         ),
         floatingActionButton: _buildFloatingActionButton(),
@@ -427,6 +423,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildHabitListBoxSection() {
+    return Consumer<HabitProvider>(
+      builder: (context, habitProvider, child) {
+        final allHabits = habitProvider.habits;
+        final todayHabits = habitProvider.getTodayHabits();
+        final completedTodayHabits = habitProvider.getCompletedTodayHabits();
+        
+        return Column(
+          children: [
+            // Main Habit List Box
+            HabitListBox(
+              title: 'Today\'s Habits',
+              habits: todayHabits,
+              showActions: true,
+              showSearch: true,
+              showCategoryFilter: true,
+              showSortOptions: true,
+              showGroupByCategory: true,
+              headerGradient: AppTheme.auroraGradient,
+              onEmptyStateAction: () => _navigateToAddHabit(),
+              emptyStateMessage: 'No habits for today!',
+              emptyStateActionText: 'Create Habit',
+              onHabitTap: (habit) => _navigateToHabitDetail(habit),
+              onHabitComplete: (habit) => _completeHabit(habit),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Completed Habits List Box
+            if (completedTodayHabits.isNotEmpty)
+              HabitListBox(
+                title: 'Completed Today',
+                habits: completedTodayHabits,
+                showActions: false,
+                showSearch: false,
+                showCategoryFilter: false,
+                showSortOptions: false,
+                showGroupByCategory: false,
+                headerGradient: AppTheme.forestGradient,
+                showEmptyState: false,
+              ),
+            
+            const SizedBox(height: 16),
+            
+            // Quick Actions List Box
+            HabitListBox(
+              title: 'Quick Actions',
+              habits: allHabits.take(3).toList(), // Show first 3 habits for quick access
+              showActions: true,
+              showSearch: false,
+              showCategoryFilter: false,
+              showSortOptions: false,
+              showGroupByCategory: false,
+              headerGradient: AppTheme.sunsetGradient,
+              onEmptyStateAction: () => _navigateToAddHabit(),
+              emptyStateMessage: 'No habits available for quick actions!',
+              emptyStateActionText: 'Create Habit',
+              onHabitTap: (habit) => _navigateToHabitDetail(habit),
+              onHabitComplete: (habit) => _completeHabit(habit),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildProgressCard(Map<String, dynamic> stats) {
     final totalHabits = stats['totalHabits'] as int;
     final completedToday = stats['completedToday'] as int;
@@ -658,34 +720,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final filteredTodayHabits = _filterHabits(todayHabits);
         final filteredCompletedHabits = _filterHabits(completedHabits);
 
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: RefreshIndicator(
-            onRefresh: () async {
-              _refreshController.forward();
-              await Future.delayed(const Duration(milliseconds: 500));
-              _refreshController.reverse();
-            },
-            child: ListView(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              children: [
-                if (filteredTodayHabits.isNotEmpty) ...[
-                  _buildSectionHeader('PENDING HABITS', AppTheme.fireGradient),
-                  const SizedBox(height: 16),
-                  ...filteredTodayHabits.map((habit) => _buildHabitTile(habit, true)),
-                ],
-                if (filteredCompletedHabits.isNotEmpty && _showCompleted) ...[
-                  const SizedBox(height: 24),
-                  _buildSectionHeader('COMPLETED TODAY', AppTheme.forestGradient),
-                  const SizedBox(height: 16),
-                  ...filteredCompletedHabits.map((habit) => _buildHabitTile(habit, false)),
-                ],
-                if (filteredTodayHabits.isEmpty && filteredCompletedHabits.isEmpty) ...[
-                  _buildEmptyState(),
-                ],
+        return RefreshIndicator(
+          onRefresh: () async {
+            _refreshController.forward();
+            await Future.delayed(const Duration(milliseconds: 500));
+            _refreshController.reverse();
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildWelcomeSection(),
+              const SizedBox(height: 16),
+              _buildStatisticsSection(),
+              const SizedBox(height: 24),
+              if (filteredTodayHabits.isNotEmpty) ...[
+                _buildSectionHeader('PENDING HABITS', AppTheme.fireGradient),
+                const SizedBox(height: 16),
+                ...filteredTodayHabits.map((habit) => _buildHabitTile(habit, true)),
               ],
-            ),
+              if (filteredCompletedHabits.isNotEmpty && _showCompleted) ...[
+                const SizedBox(height: 24),
+                _buildSectionHeader('COMPLETED TODAY', AppTheme.forestGradient),
+                const SizedBox(height: 16),
+                ...filteredCompletedHabits.map((habit) => _buildHabitTile(habit, false)),
+              ],
+              if (filteredTodayHabits.isEmpty && filteredCompletedHabits.isEmpty) ...[
+                _buildEmptyState(),
+              ],
+            ],
           ),
         );
       },
@@ -702,15 +764,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return _buildEmptyState();
         }
 
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: filteredHabits.length,
-            itemBuilder: (context, index) {
-              return _buildHabitTile(filteredHabits[index], false);
-            },
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: HabitListBox(
+            title: 'All Habits',
+            habits: filteredHabits,
+            showActions: false,
+            showSearch: true,
+            showCategoryFilter: true,
+            showSortOptions: true,
+            showGroupByCategory: true,
+            headerGradient: AppTheme.oceanGradient,
+            onEmptyStateAction: () => _navigateToAddHabit(),
+            emptyStateMessage: 'No habits found!',
+            emptyStateActionText: 'Create Habit',
+            onHabitTap: (habit) => _navigateToHabitDetail(habit),
           ),
         );
       },
@@ -722,17 +790,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, habitProvider, child) {
         final categories = HabitCategory.values;
         
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: ListView(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            children: [
-              _buildSectionHeader('HABIT CATEGORIES', AppTheme.auroraGradient),
-              const SizedBox(height: 20),
-              ...categories.map((category) => _buildCategoryCard(category, habitProvider)),
-            ],
-          ),
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildSectionHeader('HABIT CATEGORIES', AppTheme.auroraGradient),
+            const SizedBox(height: 20),
+            ...categories.map((category) => _buildCategoryCard(category, habitProvider)),
+          ],
         );
       },
     );
@@ -751,15 +815,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return _buildEmptyState();
         }
 
-        return Container(
-          margin: const EdgeInsets.all(16),
-          child: ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: filteredCompletedHabits.length,
-            itemBuilder: (context, index) {
-              return _buildHabitTile(filteredCompletedHabits[index], false);
-            },
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: HabitListBox(
+            title: 'Completed Habits',
+            habits: filteredCompletedHabits,
+            showActions: false,
+            showSearch: true,
+            showCategoryFilter: true,
+            showSortOptions: true,
+            showGroupByCategory: true,
+            headerGradient: AppTheme.forestGradient,
+            onEmptyStateAction: () => _navigateToAddHabit(),
+            emptyStateMessage: 'No completed habits found!',
+            emptyStateActionText: 'Create Habit',
+            onHabitTap: (habit) => _navigateToHabitDetail(habit),
           ),
         );
       },
