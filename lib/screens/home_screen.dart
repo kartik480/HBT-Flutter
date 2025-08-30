@@ -12,6 +12,7 @@ import 'package:habit_tracker/screens/analytics_screen.dart';
 import 'package:habit_tracker/screens/auth/login_screen.dart';
 import 'package:habit_tracker/screens/habit_detail_screen.dart';
 import 'package:habit_tracker/screens/settings_screen.dart';
+import 'package:habit_tracker/screens/reminders_screen.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/models/habit.dart';
 
@@ -144,25 +145,44 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: AppTheme.forestGradient),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.forestGradient.first.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: () => _navigateToAnalytics(),
-                  icon: const Icon(Icons.analytics, color: Colors.white),
-                  tooltip: 'Analytics',
-                ),
-              ),
+                             Container(
+                 margin: const EdgeInsets.only(right: 8),
+                 decoration: BoxDecoration(
+                   gradient: LinearGradient(colors: AppTheme.forestGradient),
+                   borderRadius: BorderRadius.circular(20),
+                   boxShadow: [
+                     BoxShadow(
+                       color: AppTheme.forestGradient.first.withOpacity(0.3),
+                       blurRadius: 10,
+                       offset: const Offset(0, 5),
+                     ),
+                   ],
+                 ),
+                 child: IconButton(
+                   onPressed: () => _navigateToAnalytics(),
+                   icon: const Icon(Icons.analytics, color: Colors.white),
+                   tooltip: 'Analytics',
+                 ),
+               ),
+               Container(
+                 margin: const EdgeInsets.only(right: 8),
+                 decoration: BoxDecoration(
+                   gradient: LinearGradient(colors: AppTheme.cosmicGradient),
+                   borderRadius: BorderRadius.circular(20),
+                   boxShadow: [
+                     BoxShadow(
+                       color: AppTheme.cosmicGradient.first.withOpacity(0.3),
+                       blurRadius: 10,
+                       offset: const Offset(0, 5),
+                     ),
+                   ],
+                 ),
+                 child: IconButton(
+                   onPressed: () => _navigateToReminders(),
+                   icon: const Icon(Icons.notifications, color: Colors.white),
+                   tooltip: 'Reminders',
+                 ),
+               ),
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
@@ -1336,6 +1356,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+  }
+
+  void _navigateToReminders() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RemindersScreen()),
     );
   }
 

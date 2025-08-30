@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:habit_tracker/providers/habit_provider.dart';
 import 'package:habit_tracker/providers/auth_provider.dart';
+import 'package:habit_tracker/providers/reminder_provider.dart';
 import 'package:habit_tracker/screens/splash_screen.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/utils/performance_config.dart';
@@ -23,6 +24,7 @@ class HabitTrackerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => HabitProvider()),
+        ChangeNotifierProvider(create: (context) => ReminderProvider()),
       ],
       child: MaterialApp(
         title: 'Habit Tracker',

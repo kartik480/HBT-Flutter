@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/habit.dart';
 import '../utils/app_theme.dart';
+import 'reminder_indicator.dart';
 
 class HabitListBox extends StatefulWidget {
   final String title;
@@ -485,13 +486,20 @@ class _HabitListBoxState extends State<HabitListBox> {
               size: 20,
             ),
           ),
-        title: Text(
-          habit.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                habit.title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            ReminderIndicator(habitId: habit.id, size: 20),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

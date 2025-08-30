@@ -4,6 +4,7 @@ import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/providers/habit_provider.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 import 'package:habit_tracker/screens/add_habit_screen.dart';
+import 'package:habit_tracker/screens/add_reminder_screen.dart';
 
 class HabitDetailScreen extends StatefulWidget {
   final Habit habit;
@@ -577,6 +578,47 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
           width: double.infinity,
           height: 60,
           decoration: BoxDecoration(
+            gradient: LinearGradient(colors: AppTheme.cosmicGradient),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.cosmicGradient.first.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: () => _addReminder(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.notifications, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'Add Reminder',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          height: 60,
+          decoration: BoxDecoration(
             gradient: LinearGradient(colors: AppTheme.oceanGradient),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
@@ -754,6 +796,18 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> {
       const SnackBar(
         content: Text('Edit feature coming soon!'),
         backgroundColor: AppTheme.primaryColor,
+      ),
+    );
+  }
+
+  void _addReminder() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddReminderScreen(
+          habitId: widget.habit.id,
+          habitTitle: widget.habit.title,
+        ),
       ),
     );
   }
