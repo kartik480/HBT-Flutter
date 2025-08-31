@@ -68,9 +68,9 @@ class AITeacherWeb:
     def ask_question(self, question, mood="neutral"):
         """Ask AI Teacher a question"""
         try:
-            response = requests.post(f"{self.api_url}/users/{self.current_user_id}/query", json={
-                "query": question,
-                "mood": mood
+            response = requests.post(f"{self.api_url}/ai/ask", json={
+                "user_id": self.current_user_id,
+                "question": question
             })
             if response.status_code == 200:
                 return response.json()
@@ -82,7 +82,7 @@ class AITeacherWeb:
     def get_insights(self):
         """Get user insights"""
         try:
-            response = requests.get(f"{self.api_url}/users/{self.current_user_id}/insights")
+            response = requests.get(f"{self.api_url}/ai/insights?user_id={self.current_user_id}")
             if response.status_code == 200:
                 return response.json()
             return None
@@ -93,7 +93,7 @@ class AITeacherWeb:
     def get_progress(self, days=30):
         """Get user progress"""
         try:
-            response = requests.get(f"{self.api_url}/users/{self.current_user_id}/progress?days={days}")
+            response = requests.get(f"{self.api_url}/ai/progress?user_id={self.current_user_id}&days={days}")
             if response.status_code == 200:
                 return response.json()
             return None
@@ -104,8 +104,10 @@ class AITeacherWeb:
     def get_motivation(self, context=None):
         """Get motivational quote"""
         try:
-            params = {"context": context} if context else {}
-            response = requests.get(f"{self.api_url}/motivation/quote", params=params)
+            params = {"user_id": self.current_user_id}
+            if context:
+                params["context"] = context
+            response = requests.get(f"{self.api_url}/ai/motivation", params=params)
             if response.status_code == 200:
                 return response.json()
             return None
@@ -116,7 +118,8 @@ class AITeacherWeb:
     def start_coaching(self, session_type="general"):
         """Start coaching session"""
         try:
-            response = requests.post(f"{self.api_url}/users/{self.current_user_id}/coaching/session", json={
+            response = requests.post(f"{self.api_url}/ai/coaching", json={
+                "user_id": self.current_user_id,
                 "session_type": session_type
             })
             if response.status_code == 200:
@@ -128,167 +131,6 @@ class AITeacherWeb:
 
 # Initialize AI Teacher Web interface
 ai_teacher_web = AITeacherWeb()
-
-@app.route('/')
-def index():
-    """Main page"""
-    return render_template('index.html')
-
-@app.route('/chat')
-def chat():
-    """Chat interface with AI Teacher"""
-    return render_template('chat.html')
-
-@app.route('/habits')
-def habits():
-    """Habit management page"""
-    return render_template('habits.html')
-
-@app.route('/insights')
-def insights():
-    """User insights and analysis page"""
-    return render_template('insights.html')
-
-@app.route('/coaching')
-def coaching():
-    """Coaching sessions page"""
-    return render_template('coaching.html')
-
-# API endpoints for the web interface
-
-@app.route('/api/create_user', methods=['POST'])
-def api_create_user():
-    """Create a new user"""
-    try:
-        data = request.get_json()
-        name = data.get('name', 'Anonymous User')
-        preferences = data.get('preferences', {})
-        
-        result = ai_teacher_web.create_user(name, preferences)
-        if result:
-            session['user_id'] = result['user_id']
-            session['user_name'] = name
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to create user"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/add_habit', methods=['POST'])
-def api_add_habit():
-    """Add a new habit"""
-    try:
-        data = request.get_json()
-        result = ai_teacher_web.add_habit(
-            habit_name=data.get('name'),
-            description=data.get('description', ''),
-            frequency=data.get('frequency', 'daily'),
-            reminder_time=data.get('reminder_time', 'morning')
-        )
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to add habit"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/ask_question', methods=['POST'])
-def api_ask_question():
-    """Ask AI Teacher a question"""
-    try:
-        data = request.get_json()
-        question = data.get('question', '')
-        mood = data.get('mood', 'neutral')
-        
-        if not question:
-            return jsonify({"success": False, "error": "Question is required"})
-        
-        result = ai_teacher_web.ask_question(question, mood)
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to get response"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/get_insights')
-def api_get_insights():
-    """Get user insights"""
-    try:
-        result = ai_teacher_web.get_insights()
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to get insights"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/get_progress')
-def api_get_progress():
-    """Get user progress"""
-    try:
-        days = request.args.get('days', 30, type=int)
-        result = ai_teacher_web.get_progress(days)
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to get progress"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/get_motivation')
-def api_get_motivation():
-    """Get motivational quote"""
-    try:
-        context = request.args.get('context')
-        result = ai_teacher_web.get_motivation(context)
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to get motivation"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/start_coaching', methods=['POST'])
-def api_start_coaching():
-    """Start coaching session"""
-    try:
-        data = request.get_json()
-        session_type = data.get('session_type', 'general')
-        
-        result = ai_teacher_web.start_coaching(session_type)
-        if result:
-            return jsonify({"success": True, "data": result})
-        else:
-            return jsonify({"success": False, "error": "Failed to start coaching"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-@app.route('/api/health')
-def api_health():
-    """Check API health"""
-    try:
-        response = requests.get(f"{self.api_url}/health")
-        if response.status_code == 200:
-            return jsonify({"success": True, "status": "API is healthy"})
-        else:
-            return jsonify({"success": False, "status": "API is not responding"})
-    except Exception as e:
-        return jsonify({"success": False, "status": f"API connection failed: {str(e)}"})
-
-if __name__ == '__main__':
-    # Create templates directory if it doesn't exist
-    os.makedirs('templates', exist_ok=True)
-    
-    # Create basic HTML templates
-    create_basic_templates()
-    
-    print("🌐 Starting AI Teacher Web Interface...")
-    print(f"📡 API URL: {API_BASE_URL}")
-    print("🌍 Web Interface: http://localhost:5000")
-    print("📚 API Documentation: http://localhost:8000/docs")
-    
-    app.run(debug=True, host='0.0.0.0', port=5000)
 
 def create_basic_templates():
     """Create basic HTML templates for the web interface"""
@@ -525,3 +367,165 @@ def create_basic_templates():
     for filename, title in templates:
         with open(f'templates/{filename}', 'w', encoding='utf-8') as f:
             f.write(basic_template.replace('{{ title }}', title))
+
+@app.route('/')
+def index():
+    """Main page"""
+    return render_template('index.html')
+
+@app.route('/chat')
+def chat():
+    """Chat interface with AI Teacher"""
+    return render_template('chat.html')
+
+@app.route('/habits')
+def habits():
+    """Habit management page"""
+    return render_template('habits.html')
+
+@app.route('/insights')
+def insights():
+    """User insights and analysis page"""
+    return render_template('insights.html')
+
+@app.route('/coaching')
+def coaching():
+    """Coaching sessions page"""
+    return render_template('coaching.html')
+
+# API endpoints for the web interface
+
+@app.route('/api/create_user', methods=['POST'])
+def api_create_user():
+    """Create a new user"""
+    try:
+        data = request.get_json()
+        name = data.get('name', 'Anonymous User')
+        preferences = data.get('preferences', {})
+        
+        result = ai_teacher_web.create_user(name, preferences)
+        if result:
+            session['user_id'] = result['user_id']
+            session['user_name'] = name
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to create user"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/add_habit', methods=['POST'])
+def api_add_habit():
+    """Add a new habit"""
+    try:
+        data = request.get_json()
+        result = ai_teacher_web.add_habit(
+            habit_name=data.get('name'),
+            description=data.get('description', ''),
+            frequency=data.get('frequency', 'daily'),
+            reminder_time=data.get('reminder_time', 'morning')
+        )
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to add habit"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/ask_question', methods=['POST'])
+def api_ask_question():
+    """Ask AI Teacher a question"""
+    try:
+        data = request.get_json()
+        question = data.get('question', '')
+        mood = data.get('mood', 'neutral')
+        
+        if not question:
+            return jsonify({"success": False, "error": "Question is required"})
+        
+        # Use the correct endpoint and parameter names
+        result = ai_teacher_web.ask_question(question, mood)
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to get response"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/get_insights')
+def api_get_insights():
+    """Get user insights"""
+    try:
+        result = ai_teacher_web.get_insights()
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to get insights"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/get_progress')
+def api_get_progress():
+    """Get user progress"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        result = ai_teacher_web.get_progress(days)
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to get progress"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/get_motivation')
+def api_get_motivation():
+    """Get motivational quote"""
+    try:
+        context = request.args.get('context')
+        result = ai_teacher_web.get_motivation(context)
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to get motivation"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/start_coaching', methods=['POST'])
+def api_start_coaching():
+    """Start coaching session"""
+    try:
+        data = request.get_json()
+        session_type = data.get('session_type', 'general')
+        
+        result = ai_teacher_web.start_coaching(session_type)
+        if result:
+            return jsonify({"success": True, "data": result})
+        else:
+            return jsonify({"success": False, "error": "Failed to start coaching"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/health')
+def api_health():
+    """Check API health"""
+    try:
+        response = requests.get(f"{API_BASE_URL}/health")
+        if response.status_code == 200:
+            return jsonify({"success": True, "status": "API is healthy"})
+        else:
+            return jsonify({"success": False, "status": "API is not responding"})
+    except Exception as e:
+        return jsonify({"success": False, "status": f"API connection failed: {str(e)}"})
+
+if __name__ == '__main__':
+    # Create templates directory if it doesn't exist
+    os.makedirs('templates', exist_ok=True)
+    
+    # Create basic HTML templates
+    create_basic_templates()
+    
+    print("Starting AI Teacher Web Interface...")
+    print(f"API URL: {API_BASE_URL}")
+    print("Web Interface: http://localhost:5000")
+    print("API Documentation: http://localhost:8000/docs")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000)

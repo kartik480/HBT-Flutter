@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with AI Teacher</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .chat-container { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; height: 500px; display: flex; flex-direction: column; }
+        .chat-messages { flex: 1; overflow-y: auto; margin-bottom: 20px; padding: 10px; }
+        .message { margin-bottom: 15px; padding: 15px; border-radius: 15px; max-width: 80%; }
+        .user-message { background: linear-gradient(45deg, #4ecdc4, #44a08d); color: white; margin-left: auto; }
+        .ai-message { background: rgba(255,255,255,0.2); color: white; }
+        .chat-input { display: flex; gap: 10px; }
+        .chat-input input { flex: 1; padding: 15px; border: none; border-radius: 25px; background: rgba(255,255,255,0.2); color: white; }
+        .chat-input input::placeholder { color: rgba(255,255,255,0.7); }
+        .chat-input button { padding: 15px 25px; border: none; border-radius: 25px; background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; cursor: pointer; }
+        .mood-selector { margin-bottom: 20px; text-align: center; }
+        .mood-selector select { padding: 10px; border-radius: 15px; border: none; background: rgba(255,255,255,0.2); color: white; }
+        .back-btn { display: inline-block; padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 15px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Back to Home</a>
+        
+        <div class="header">
+            <h1>💬 Chat with AI Teacher</h1>
+            <p>Ask questions, get guidance, and receive personalized coaching</p>
+        </div>
+        
+        <div class="mood-selector">
+            <label for="mood" style="color: white; margin-right: 10px;">How are you feeling?</label>
+            <select id="mood">
+                <option value="neutral">Neutral</option>
+                <option value="positive">Happy/Positive</option>
+                <option value="negative">Sad/Stressed</option>
+            </select>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai-message">
+                    <strong>AI Teacher:</strong> Hello! I'm your AI Teacher and personal coach. How can I help you today? You can ask me about habits, motivation, goal setting, or anything else you'd like guidance on.
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Ask me anything..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            const mood = document.getElementById('mood').value;
+            
+            if (!message) return;
+            
+            // Add user message
+            addMessage('You', message, 'user-message');
+            input.value = '';
+            
+            // Send to API
+            fetch('/api/ask_question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: message, mood: mood })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const response = data.data;
+                    let aiMessage = response.message;
+                    
+                    if (response.motivation) {
+                        aiMessage += '\n\n💪 ' + response.motivation;
+                    }
+                    
+                    if (response.suggestions && response.suggestions.length > 0) {
+                        aiMessage += '\n\n💡 Suggestions:\n' + response.suggestions.map(s => '• ' + s).join('\n');
+                    }
+                    
+                    addMessage('AI Teacher', aiMessage, 'ai-message');
+                } else {
+                    addMessage('AI Teacher', 'Sorry, I encountered an error. Please try again.', 'ai-message');
+                }
+            })
+            .catch(error => {
+                addMessage('AI Teacher', 'Sorry, I'm having trouble connecting. Please check if the API is running.', 'ai-message');
+            });
+        }
+        
+        function addMessage(sender, text, className) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.innerHTML = `<strong>${sender}:</strong> ${text.replace(/\n/g, '<br>')}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>

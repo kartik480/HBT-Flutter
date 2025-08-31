@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Teacher - Your Personal AI Coach</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; color: white; margin-bottom: 40px; }
+        .header h1 { font-size: 3rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 40px; }
+        .feature-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; text-align: center; color: white; transition: transform 0.3s ease; }
+        .feature-card:hover { transform: translateY(-10px); }
+        .feature-card h3 { font-size: 1.5rem; margin-bottom: 15px; }
+        .feature-card p { opacity: 0.8; line-height: 1.6; }
+        .cta-buttons { text-align: center; }
+        .btn { display: inline-block; padding: 15px 30px; margin: 10px; background: linear-gradient(45deg, #ff6b6b, #ee5a24); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; transition: transform 0.3s ease; }
+        .btn:hover { transform: scale(1.05); }
+        .btn-secondary { background: linear-gradient(45deg, #4ecdc4, #44a08d); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Teacher</h1>
+            <p>Your Personal AI Coach for Habit Formation, Guidance, and Motivation</p>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <h3>🧠 Intelligent Analysis</h3>
+                <p>AI-powered habit analysis and pattern recognition to help you understand your behavior and optimize your routines.</p>
+            </div>
+            <div class="feature-card">
+                <h3>💪 Personalized Coaching</h3>
+                <p>Adaptive coaching that adjusts to your mood, progress, and preferences for maximum effectiveness.</p>
+            </div>
+            <div class="feature-card">
+                <h3>⏰ Smart Reminders</h3>
+                <p>Intelligent reminder system that learns your optimal times and adapts to your schedule.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📊 Progress Tracking</h3>
+                <p>Comprehensive progress analysis with actionable insights and recommendations.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎯 Goal Setting</h3>
+                <p>Smart goal setting and habit formation strategies based on proven psychological principles.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🌟 Motivation</h3>
+                <p>Personalized motivational content and quotes to keep you inspired and on track.</p>
+            </div>
+        </div>
+        
+        <div class="cta-buttons">
+            <a href="/chat" class="btn">Start Chatting with AI Teacher</a>
+            <a href="/habits" class="btn btn-secondary">Manage Your Habits</a>
+            <a href="/insights" class="btn">View Your Insights</a>
+            <a href="/coaching" class="btn btn-secondary">Start Coaching Session</a>
+        </div>
+    </div>
+</body>
+</html>

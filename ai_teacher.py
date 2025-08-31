@@ -504,15 +504,15 @@ class AITeacher:
         self.data_manager = DataManager()
         
         # OpenRouter API configuration
-        self.openrouter_api_key = "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"
+        self.openrouter_api_key = "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"
         self.openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
         
         self.active_users = {}
         self.learning_thread = None
         self.start_learning_thread()
     
-    def _call_openrouter_api(self, messages: List[Dict[str, str]], model: str = "x-ai/grok-code-fast-1") -> str:
-        """Call OpenRouter API to get AI response"""
+    def _call_openrouter_api(self, messages: List[Dict[str, str]], model: str = "google/gemini-2.5-pro") -> str:
+        """Call OpenRouter API to get AI response using Google Gemini 2.5 Pro"""
         try:
             headers = {
                 "Authorization": f"Bearer {self.openrouter_api_key}",
@@ -521,11 +521,39 @@ class AITeacher:
                 "X-Title": "Habit Tracker AI Teacher",
             }
             
+            # Format messages for Gemini 2.5 Pro
+            formatted_messages = []
+            for msg in messages:
+                if msg['role'] == 'system':
+                    # Convert system message to user message for Gemini
+                    formatted_messages.append({
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": msg['content']
+                            }
+                        ]
+                    })
+                else:
+                    formatted_messages.append({
+                        "role": msg['role'],
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": msg['content']
+                            }
+                        ]
+                    })
+            
             data = {
                 "model": model,
-                "messages": messages,
-                "max_tokens": 500,
-                "temperature": 0.7
+                "messages": formatted_messages,
+                "max_tokens": 1200,  # Increased for better responses
+                "temperature": 0.8,   # Slightly higher for more creative responses
+                "top_p": 0.9,        # Add top_p for better response quality
+                "frequency_penalty": 0.1,  # Reduce repetition
+                "presence_penalty": 0.1    # Encourage more diverse responses
             }
             
             response = requests.post(
@@ -537,7 +565,13 @@ class AITeacher:
             
             if response.status_code == 200:
                 result = response.json()
-                return result['choices'][0]['message']['content']
+                if 'choices' in result and len(result['choices']) > 0:
+                    content = result['choices'][0]['message']['content']
+                    print(f"OpenRouter API success: Got response of length {len(content)}")
+                    return content
+                else:
+                    print(f"OpenRouter API returned unexpected format: {result}")
+                    return None
             else:
                 print(f"OpenRouter API error: {response.status_code} - {response.text}")
                 return None
@@ -572,8 +606,30 @@ class AITeacher:
         
         # Try to get response from OpenRouter API first
         system_message = f"""You are an AI Teacher specializing in habit formation, personal development, and motivation. 
-        The user has the following context: {user_context}
-        Provide helpful, encouraging, and practical advice. Be concise but thorough."""
+
+Your role is to provide helpful, encouraging, and practical advice to help users build better habits and achieve their goals.
+
+User Context: {user_context}
+
+Key Principles:
+- Start small and build gradually
+- Focus on consistency over perfection
+- Celebrate small wins and progress
+- Provide actionable, specific advice
+- Be encouraging and supportive
+- Use emojis and formatting to make responses engaging
+- Always respond to the specific question asked
+- Provide unique, personalized advice based on the user's context
+- Avoid generic responses - make each answer specific to their situation
+
+Current User Query: {query}
+
+Please provide a helpful, motivating response that directly addresses their specific question while incorporating habit-building principles. Make sure your response is:
+1. Directly relevant to what they asked
+2. Specific and actionable
+3. Encouraging and motivating
+4. Personalized to their context
+5. Not generic or repetitive"""
         
         messages = [
             {"role": "system", "content": system_message},
@@ -582,8 +638,9 @@ class AITeacher:
         
         ai_response = self._call_openrouter_api(messages)
         
-        if ai_response:
+        if ai_response and len(ai_response.strip()) > 20:  # Only use if response is substantial
             # Use AI response from OpenRouter
+            print(f"Using OpenRouter API response: {ai_response[:100]}...")
             response = {
                 'message': ai_response,
                 'suggestions': [],
@@ -592,9 +649,10 @@ class AITeacher:
                 'analysis': None
             }
         else:
-            # Fallback to local processing if API fails
+            # Enhanced fallback to local processing if API fails
+            print(f"API response insufficient, using enhanced local fallback. API response: {ai_response}")
             primary_intent = max(intent_scores.items(), key=lambda x: x[1])[0] if intent_scores else 'general'
-            response = self._generate_response(primary_intent, user_context, entities, query)
+            response = self._generate_enhanced_response(primary_intent, user_context, entities, query)
         
         # Save interaction for learning
         self.data_manager.save_interaction(user_id, query, response['message'], 
@@ -645,12 +703,15 @@ class AITeacher:
             'analysis': None
         }
         
+        # Enhanced context-aware response generation
+        query_lower = original_query.lower()
+        
         if intent == 'motivation':
             response['motivation'] = self.coach.get_motivational_quote(original_query)
-            response['message'] = self.coach.get_personalized_message(user_context, intent)
+            response['message'] = self._generate_motivational_response(query_lower, user_context)
             
         elif intent == 'guidance':
-            response['message'] = self.coach.get_personalized_message(user_context, intent)
+            response['message'] = self._generate_guidance_response(query_lower, user_context, entities)
             response['suggestions'] = self._get_guidance_suggestions(entities, user_context)
             
         elif intent == 'reminder':
@@ -667,11 +728,11 @@ class AITeacher:
                 response['message'] = "What would you like me to remind you about?"
                 
         elif intent == 'analysis':
-            response['message'] = "Here's your progress analysis:"
+            response['message'] = self._generate_analysis_response(user_context)
             response['analysis'] = self._generate_progress_analysis(user_context)
             
         elif intent == 'habit_formation':
-            response['message'] = "Let's work on building better habits!"
+            response['message'] = self._generate_habit_formation_response(query_lower, user_context)
             response['suggestions'] = [
                 "Start with one small habit and build from there",
                 "Use habit stacking to link new habits to existing routines",
@@ -680,10 +741,68 @@ class AITeacher:
             ]
             
         else:
-            response['message'] = self.coach.get_personalized_message(user_context, 'supportive')
-            response['motivation'] = self.coach.get_motivational_quote()
+            response['message'] = self._generate_general_response(query_lower, user_context, entities)
         
         return response
+    
+    def _generate_motivational_response(self, query: str, user_context: Dict) -> str:
+        """Generate motivational response based on query and context"""
+        if 'exercise' in query or 'workout' in query:
+            return "💪 **Exercise Motivation:** Movement is medicine! Even 10 minutes of walking can boost your mood and energy. Start with what feels good and build from there. Your body will thank you!"
+        elif 'habit' in query or 'routine' in query:
+            return "🔥 **Habit Building:** You don't need motivation to start - you need discipline to continue! Think about your future self. What would they thank you for doing today?"
+        elif 'sleep' in query or 'bedtime' in query:
+            return "😴 **Sleep Motivation:** Quality sleep is the foundation of everything else. Create a relaxing bedtime routine and stick to it. Your mind and body will reward you!"
+        elif 'diet' in query or 'food' in query:
+            return "🥗 **Healthy Eating:** Focus on adding good foods rather than restricting. Start your day with protein, stay hydrated, and remember - progress, not perfection!"
+        else:
+            return "🌟 **General Motivation:** Every step forward, no matter how small, is progress. Your future self is watching and cheering you on! What will you do today to make them proud?"
+    
+    def _generate_guidance_response(self, query: str, user_context: Dict, entities: Dict) -> str:
+        """Generate guidance response based on query and context"""
+        if 'start' in query or 'begin' in query:
+            return "🚀 **Getting Started:** The best way to start is to start small! Choose one habit and commit to it for just 2 minutes a day. Once that becomes automatic, gradually increase the time."
+        elif 'stuck' in query or 'struggle' in query:
+            return "🔄 **Overcoming Obstacles:** It's normal to struggle! When you feel stuck, break your goal into smaller pieces. What's the tiniest step you can take right now?"
+        elif 'consistency' in query or 'maintain' in query:
+            return "⏰ **Building Consistency:** Consistency beats perfection every time! Focus on showing up daily, even if it's just for a few minutes. Small daily actions compound into massive results."
+        elif 'goal' in query or 'target' in query:
+            return "🎯 **Goal Setting:** Break big goals into tiny, actionable steps. What's the smallest thing you can do today that moves you forward? Remember, progress is progress, no matter how small!"
+        else:
+            return "💡 **Personal Guidance:** Based on your current progress, I recommend focusing on one area at a time. What feels most important to you right now?"
+    
+    def _generate_analysis_response(self, user_context: Dict) -> str:
+        """Generate analysis response based on user context"""
+        if user_context['recent_progress'] == 'improving':
+            return "📈 **Progress Analysis:** Great news! You're on an upward trend. Your consistency is paying off, and you're building momentum. Keep up the excellent work!"
+        elif user_context['recent_progress'] == 'declining':
+            return "📉 **Progress Analysis:** I notice you've been struggling lately. This is completely normal and happens to everyone. Let's identify what's changed and get you back on track."
+        else:
+            return "📊 **Progress Analysis:** Your progress has been stable. This is actually a good foundation! Now let's work on building momentum and taking it to the next level."
+    
+    def _generate_habit_formation_response(self, query: str, user_context: Dict) -> str:
+        """Generate habit formation response based on query and context"""
+        if 'morning' in query or 'start' in query:
+            return "🌅 **Morning Habits:** Morning routines set the tone for your entire day! Start with something simple like making your bed or drinking water. Small wins create momentum."
+        elif 'evening' in query or 'night' in query:
+            return "🌙 **Evening Habits:** Evening routines help you wind down and prepare for tomorrow. Try reading, journaling, or gentle stretching. Consistency in sleep schedule is key!"
+        elif 'exercise' in query or 'workout' in query:
+            return "🏃‍♂️ **Exercise Habits:** Movement habits work best when scheduled at the same time daily. Start with just 5-10 minutes and gradually increase. Your body will thank you!"
+        else:
+            return "🔧 **Habit Formation:** The key to building habits is starting small and being consistent. Choose one habit, commit to 2 minutes daily, and build from there!"
+    
+    def _generate_general_response(self, query: str, user_context: Dict, entities: Dict) -> str:
+        """Generate general response for unrecognized queries"""
+        if 'hello' in query or 'hi' in query:
+            return "👋 **Greeting:** Hello! I'm here to help you build better habits and achieve your goals. What would you like to work on today?"
+        elif 'help' in query or 'support' in query:
+            return "🤝 **Support:** I'm here to help! I can assist with habit building, motivation, goal setting, progress tracking, and much more. What specific area do you need help with?"
+        elif 'thank' in query or 'thanks' in query:
+            return "🙏 **Gratitude:** You're welcome! I'm glad I could help. Remember, you're doing great work on yourself, and that's something to be proud of!"
+        elif 'how' in query and 'are' in query:
+            return "😊 **Status:** I'm doing well and ready to help you! How are you feeling today? What's on your mind regarding your habits and goals?"
+        else:
+            return "💭 **Personal Reflection:** That's an interesting question! While I'm processing it, take a moment to reflect on what you really want to achieve. Sometimes the best answers come from within."
     
     def _get_guidance_suggestions(self, entities: Dict, user_context: Dict) -> List[str]:
         """Get personalized guidance suggestions"""
@@ -756,6 +875,638 @@ class AITeacher:
         # This is a simplified learning mechanism
         # In a real implementation, you'd use more sophisticated ML techniques
         print("AI Teacher is learning from interactions...")
+
+    def _generate_enhanced_response(self, intent: str, user_context: Dict, 
+                                   entities: Dict, original_query: str) -> Dict:
+        """Generate enhanced, more accurate responses based on intent and context"""
+        response = {
+            'message': '',
+            'suggestions': [],
+            'reminders': [],
+            'motivation': '',
+            'analysis': None
+        }
+        
+        query_lower = original_query.lower()
+        
+        # Enhanced intent-based responses with better accuracy
+        if intent == 'motivation':
+            response['message'] = self._generate_enhanced_motivational_response(query_lower, user_context)
+            response['motivation'] = self.coach.get_motivational_quote(original_query)
+            
+        elif intent == 'guidance':
+            response['message'] = self._generate_enhanced_guidance_response(query_lower, user_context, entities)
+            response['suggestions'] = self._get_enhanced_guidance_suggestions(entities, user_context)
+            
+        elif intent == 'reminder':
+            response['message'] = self._generate_enhanced_reminder_response(query_lower, user_context, entities)
+            
+        elif intent == 'analysis':
+            response['message'] = self._generate_enhanced_analysis_response(user_context)
+            response['analysis'] = self._generate_progress_analysis(user_context)
+            
+        elif intent == 'habit_formation':
+            response['message'] = self._generate_enhanced_habit_formation_response(query_lower, user_context)
+            response['suggestions'] = self._get_enhanced_habit_suggestions(query_lower, user_context)
+            
+        else:
+            response['message'] = self._generate_enhanced_general_response(query_lower, user_context, entities)
+        
+        return response
+    
+    def _generate_enhanced_motivational_response(self, query: str, user_context: Dict) -> str:
+        """Generate highly accurate motivational responses"""
+        if 'exercise' in query or 'workout' in query or 'gym' in query:
+            return """💪 **Exercise Motivation - Let's Get Moving!**
+
+I know starting can be the hardest part, but here's what I want you to remember:
+
+**Why Exercise Matters:**
+• Boosts your mood and energy levels
+• Improves sleep quality
+• Reduces stress and anxiety
+• Builds confidence and self-discipline
+
+**Start Small Strategy:**
+1. **Day 1-3:** Just 5 minutes of any movement (walking, stretching, dancing)
+2. **Day 4-7:** Increase to 10 minutes
+3. **Week 2:** Try 15-20 minutes
+4. **Build gradually** - consistency beats intensity every time!
+
+**Pro Tips:**
+• Schedule exercise at your most energetic time
+• Prepare your workout clothes the night before
+• Find an exercise buddy for accountability
+• Track your progress to see improvement
+
+Remember: You don't have to be perfect, you just have to start! What's the smallest step you can take today?"""
+            
+        elif 'habit' in query or 'routine' in query:
+            return """🔥 **Building Habits That Stick - Your Complete Guide**
+
+**The Science of Habit Formation:**
+Habits form through a 3-step loop: Cue → Routine → Reward
+
+**Step-by-Step Process:**
+1. **Choose ONE habit** to focus on (don't overwhelm yourself)
+2. **Start with 2 minutes** - yes, just 2 minutes!
+3. **Stack it** on an existing habit (after brushing teeth, do 2 min meditation)
+4. **Track it** - use a simple calendar or app
+5. **Celebrate wins** - even tiny ones!
+
+**Common Mistakes to Avoid:**
+• Trying to change too many things at once
+• Setting unrealistic goals
+• Not having a clear trigger/cue
+• Skipping the celebration/reward
+
+**Your Action Plan:**
+What ONE habit would make the biggest difference in your life right now? Start there, and let's build it together!"""
+            
+        elif 'sleep' in query or 'bedtime' in query:
+            return """😴 **Sleep Optimization - Your Path to Better Rest**
+
+**Why Sleep is Your Superpower:**
+• Improves memory and learning
+• Boosts immune system
+• Regulates mood and emotions
+• Enhances physical performance
+
+**Create Your Sleep Sanctuary:**
+1. **Environment:**
+   • Keep room cool (65-68°F/18-20°C)
+   • Use blackout curtains
+   • White noise machine or fan
+   • Comfortable mattress and pillows
+
+2. **Evening Routine (1 hour before bed):**
+   • Dim lights
+   • No screens (blue light blocks melatonin)
+   • Read a book or journal
+   • Gentle stretching or meditation
+   • Warm bath or shower
+
+3. **Daily Habits:**
+   • Get sunlight in the morning
+   • Exercise (but not 3 hours before bed)
+   • Avoid caffeine after 2 PM
+   • Consistent sleep/wake times
+
+**Tonight's Action:**
+Start with just one change - maybe dimming your lights 1 hour before bed. Small changes create big results!"""
+            
+        else:
+            return """🌟 **General Motivation - You've Got This!**
+
+**The Truth About Motivation:**
+Motivation is like a muscle - it gets stronger with use, but it's not always there when you need it. That's why we build systems and habits!
+
+**Your 3-Step Action Plan:**
+1. **Identify Your Why:** What's the deeper reason behind your goal?
+2. **Break It Down:** What's the smallest possible step you can take today?
+3. **Schedule It:** Put it in your calendar like a meeting with yourself
+
+**Remember These Truths:**
+• Progress is progress, no matter how small
+• Every expert was once a beginner
+• Your future self is watching and cheering you on
+• Consistency beats perfection every single time
+
+**Right Now:**
+Take a deep breath. You're already ahead of most people just by reading this and wanting to improve. What's one tiny thing you can do in the next 5 minutes to move forward?"""
+
+    def _generate_enhanced_guidance_response(self, query: str, user_context: Dict, entities: Dict) -> str:
+        """Generate enhanced guidance responses"""
+        if 'start' in query or 'begin' in query:
+            return """🚀 **Getting Started - Your Action Plan**
+
+**The #1 Rule:** Start smaller than you think you should!
+
+**Your 7-Day Launch Plan:**
+• **Day 1:** Choose ONE habit and commit to 2 minutes
+• **Day 2:** Do it again, same time, same place
+• **Day 3:** Increase to 3 minutes
+• **Day 4-7:** Build to 5 minutes
+
+**Why This Works:**
+• 2 minutes feels doable even on bad days
+• Small wins build momentum
+• Consistency creates automaticity
+• You'll naturally want to do more
+
+**Pro Tip:** Link your new habit to something you already do daily (like after brushing teeth or before checking phone).
+
+**Right Now:** What's the ONE habit that would make the biggest difference? Write it down and commit to 2 minutes today!"""
+            
+        elif 'stuck' in query or 'struggle' in query:
+            return """🔄 **Breaking Through Obstacles - Let's Get You Unstuck!**
+
+**First, Let's Identify What's Holding You Back:**
+• Are you overwhelmed by the size of your goal?
+• Are you trying to be perfect?
+• Are you comparing yourself to others?
+• Are you lacking a clear plan?
+
+**The Unstuck Strategy:**
+1. **Break it down** - What's the tiniest possible step?
+2. **Lower the bar** - Make it so easy you can't fail
+3. **Find your why** - What's the deeper reason?
+4. **Get support** - Who can help you?
+
+**Common Stuck Points & Solutions:**
+• **"I don't have time"** → Start with 1 minute
+• **"I'm not motivated"** → Motivation follows action
+• **"I keep failing"** → Failure is data, not defeat
+• **"It's too hard"** → Make it easier, not harder
+
+**Your Action:** What's the smallest thing you can do right now to move forward? Even if it's just opening a book or putting on workout clothes!"""
+            
+        else:
+            return """💡 **Personalized Guidance - Let's Find Your Path**
+
+**Based on your current situation, here's what I recommend:**
+
+**Immediate Focus:**
+• Choose ONE area to improve (don't spread yourself thin)
+• Start with the habit that will have the biggest impact
+• Build momentum before adding complexity
+
+**Your Success Formula:**
+1. **Clarity** - Know exactly what you want
+2. **Simplicity** - Start with the basics
+3. **Consistency** - Show up daily, no matter what
+4. **Patience** - Trust the process
+
+**This Week's Challenge:**
+Pick one habit and commit to it for just 5 minutes daily. Track your progress and celebrate every win, no matter how small!
+
+**Remember:** You don't have to figure everything out today. Just take the next step, and the path will become clearer!"""
+    
+    def _generate_enhanced_reminder_response(self, query: str, user_context: Dict, entities: Dict) -> str:
+        """Generate enhanced reminder responses"""
+        if entities.get('habits'):
+            habit = entities['habits'][0]
+            return f"""⏰ **Smart Reminder for {habit.title()}**
+
+**Your Personalized Reminder Strategy:**
+
+**Optimal Timing:** Based on your patterns, try to do this habit at the same time daily
+
+**Reminder Message:** "Time for {habit}! You've got this! 💪"
+
+**Pro Tips:**
+• Set multiple gentle reminders (don't overwhelm yourself)
+• Use habit stacking (after [existing habit], do {habit})
+• Prepare everything the night before
+• Have a backup plan for busy days
+
+**Right Now:** What time would work best for your {habit} routine? Set a reminder and commit to showing up!"""
+        else:
+            return """⏰ **Smart Reminder System - Let's Set You Up!**
+
+**What would you like me to remind you about?**
+• Exercise or workout routines
+• Meditation or mindfulness practice
+• Reading or learning sessions
+• Planning or reflection time
+• Health habits (water, sleep, etc.)
+
+**How I Can Help:**
+• Send gentle, motivational reminders
+• Adapt timing based on your schedule
+• Provide context and encouragement
+• Help you build consistency
+
+**Your Action:** Tell me what habit you want to build, and I'll help you create the perfect reminder system!"""
+    
+    def _generate_enhanced_analysis_response(self, user_context: Dict) -> str:
+        """Generate enhanced analysis responses"""
+        if user_context['recent_progress'] == 'improving':
+            return """📈 **Progress Analysis - You're Crushing It!**
+
+**Your Current Status: UPWARD TREND! 🚀**
+
+**What's Working:**
+• Your consistency is paying off
+• You're building positive momentum
+• Small wins are compounding
+• You're developing discipline
+
+**Keep the Momentum Going:**
+• Don't change what's working
+• Gradually increase your goals
+• Celebrate your progress
+• Share your success with others
+
+**Next Level Strategies:**
+• Add one new habit (but only after 21 days of current habit)
+• Increase duration or intensity gradually
+• Set bigger goals for next month
+• Mentor someone else on their journey
+
+**You're doing amazing! Keep up the excellent work! 💪"""
+            
+        elif user_context['recent_progress'] == 'declining':
+            return """📉 **Progress Analysis - Let's Get You Back on Track!**
+
+**Current Status:** Temporary setback (this happens to everyone!)
+
+**What This Means:**
+• You're human, and that's perfectly okay
+• Setbacks are part of the growth process
+• This is a learning opportunity
+• You can bounce back stronger
+
+**Recovery Strategy:**
+1. **Don't beat yourself up** - Self-compassion is key
+2. **Identify what changed** - What disrupted your routine?
+3. **Start smaller** - Reduce your goals temporarily
+4. **Rebuild momentum** - Focus on consistency over intensity
+
+**Your Comeback Plan:**
+• Pick ONE habit to focus on
+• Start with just 2 minutes daily
+• Track your progress
+• Celebrate every small win
+
+**Remember:** Every successful person has faced setbacks. What matters is getting back up!"""
+            
+        else:
+            return """📊 **Progress Analysis - Solid Foundation!**
+
+**Your Current Status: STABLE & STEADY**
+
+**What This Means:**
+• You have a good foundation to build on
+• Consistency is your strength
+• You're ready for the next level
+• This is actually a great position to be in!
+
+**Next Steps to Build Momentum:**
+• Add one new habit (but keep it simple)
+• Increase the challenge gradually
+• Set specific, measurable goals
+• Create a weekly review routine
+
+**Momentum Building Tips:**
+• Track your progress visually
+• Set weekly mini-goals
+• Find an accountability partner
+• Celebrate weekly wins
+
+**You're doing great! Now let's take it to the next level! 🚀"""
+    
+    def _generate_enhanced_habit_formation_response(self, query: str, user_context: Dict) -> str:
+        """Generate enhanced habit formation responses"""
+        if 'morning' in query or 'start' in query:
+            return """🌅 **Morning Habits - Your Day's Foundation**
+
+**Why Morning Routines Matter:**
+• Set the tone for your entire day
+• Build momentum and confidence
+• Create space for what matters most
+• Reduce decision fatigue
+
+**Your 21-Day Morning Habit Plan:**
+
+**Week 1 (Foundation):**
+• Wake up 15 minutes earlier
+• Drink a glass of water
+• Make your bed
+• 2 minutes of stretching
+
+**Week 2 (Build):**
+• Add 5 minutes of meditation
+• Write 3 things you're grateful for
+• Plan your top 3 priorities
+
+**Week 3 (Optimize):**
+• Add 10 minutes of reading
+• Review your goals
+• Prepare for the day ahead
+
+**Pro Tips:**
+• Prepare everything the night before
+• Start with just one habit
+• Same time, same place daily
+• Track your progress
+
+**Today's Action:** What's the ONE morning habit you want to start with? Commit to it for just 2 minutes!"""
+            
+        elif 'evening' in query or 'night' in query:
+            return """🌙 **Evening Habits - Your Recovery & Preparation Time**
+
+**Why Evening Routines Matter:**
+• Help you wind down and relax
+• Prepare your mind and body for sleep
+• Set you up for tomorrow's success
+• Create peaceful transitions
+
+**Your Evening Routine Blueprint:**
+
+**1 Hour Before Bed:**
+• Dim the lights
+• No screens (blue light blocks melatonin)
+• Gentle stretching or yoga
+• Read a book (not on phone/tablet)
+• Write in your journal
+
+**30 Minutes Before Bed:**
+• Warm bath or shower
+• Prepare clothes for tomorrow
+• Set your intentions for tomorrow
+• Practice gratitude
+
+**15 Minutes Before Bed:**
+• Gentle breathing exercises
+• Progressive muscle relaxation
+• Listen to calming music
+• Final bathroom visit
+
+**Sleep Optimization:**
+• Keep room cool (65-68°F)
+• Use blackout curtains
+• White noise if needed
+• Comfortable bedding
+
+**Tonight's Start:** Choose ONE evening habit to begin with. Maybe just dimming your lights 1 hour before bed!"""
+            
+        else:
+            return """🔧 **Habit Formation Mastery - Your Complete Guide**
+
+**The Science of Building Habits That Stick:**
+
+**Habit Loop (Cue → Routine → Reward):**
+1. **Cue:** What triggers your habit? (time, location, emotion, other habit)
+2. **Routine:** What action do you take?
+3. **Reward:** What benefit do you get?
+
+**Your 4-Phase Habit Building Process:**
+
+**Phase 1: Foundation (Days 1-7)**
+• Choose ONE habit to focus on
+• Start with 2 minutes maximum
+• Same time, same place daily
+• Track every day
+
+**Phase 2: Building (Days 8-21)**
+• Gradually increase duration
+• Add complexity slowly
+• Focus on consistency
+• Celebrate small wins
+
+**Phase 3: Optimization (Days 22-66)**
+• Fine-tune timing and environment
+• Add supporting habits
+• Build momentum
+• Set bigger goals
+
+**Phase 4: Mastery (Day 67+)**
+• Habit becomes automatic
+• Add new habits
+• Help others
+• Continuous improvement
+
+**Your Action Plan:**
+What ONE habit would make the biggest difference in your life? Start there, and let's build it together!"""
+    
+    def _generate_enhanced_general_response(self, query: str, user_context: Dict, entities: Dict) -> str:
+        """Generate enhanced general responses"""
+        if 'hello' in query or 'hi' in query:
+            return """👋 **Welcome to Your AI Teacher!**
+
+**I'm here to help you:**
+• Build better habits and routines
+• Stay motivated and focused
+• Overcome obstacles and challenges
+• Track your progress and growth
+• Achieve your personal goals
+
+**What I Can Do:**
+• Provide personalized coaching and advice
+• Help you create actionable plans
+• Give you motivation when you need it
+• Analyze your progress and patterns
+• Answer questions about habit formation
+
+**Let's Get Started:**
+What would you like to work on today? You can ask me about:
+• Building specific habits (exercise, reading, meditation, etc.)
+• Getting motivated or unstuck
+• Creating better routines
+• Tracking your progress
+• Any personal development topic
+
+**Remember:** I'm here to support your journey. What's on your mind?"""
+            
+        elif 'help' in query or 'support' in query:
+            return """🤝 **How I Can Help You - Your Complete Support Guide**
+
+**My Core Capabilities:**
+
+**1. Habit Building & Formation**
+• Create personalized habit plans
+• Help you start small and build gradually
+• Teach you the science of habit formation
+• Provide accountability and tracking
+
+**2. Motivation & Mindset**
+• Give you personalized motivation
+• Help you overcome obstacles
+• Build confidence and resilience
+• Keep you focused on your goals
+
+**3. Progress Analysis**
+• Track your habit completion
+• Identify patterns and trends
+• Provide insights and recommendations
+• Help you optimize your routines
+
+**4. Personal Coaching**
+• Answer your specific questions
+• Provide actionable advice
+• Help you create action plans
+• Support you through challenges
+
+**How to Get the Most from Me:**
+• Ask specific questions
+• Share your current situation
+• Tell me what you're struggling with
+• Ask for step-by-step guidance
+
+**What would you like help with today?** I'm ready to support your growth!"""
+            
+        elif 'thank' in query or 'thanks' in query:
+            return """🙏 **You're Welcome! I'm Glad I Could Help!**
+
+**Your gratitude means a lot to me! Here's what I want you to remember:**
+
+**You're Doing Great Because:**
+• You're actively working on self-improvement
+• You're seeking help and guidance
+• You're committed to building better habits
+• You're showing up for yourself
+
+**Keep Up the Amazing Work:**
+• Stay consistent with your habits
+• Celebrate your progress, no matter how small
+• Be patient with yourself
+• Keep asking questions and learning
+
+**My Commitment to You:**
+• I'll always be here to support you
+• I'll provide honest, helpful guidance
+• I'll celebrate your wins with you
+• I'll help you overcome any obstacles
+
+**Next Steps:**
+What would you like to work on next? I'm here to help you continue growing and improving!
+
+**Remember:** You're already ahead of most people just by being here and wanting to improve! 🌟"""
+            
+        else:
+            return """💭 **Let's Explore This Together!**
+
+**I'm here to help you with any questions about:**
+• Personal development and growth
+• Building better habits and routines
+• Staying motivated and focused
+• Overcoming challenges and obstacles
+• Creating positive change in your life
+
+**To give you the best help possible:**
+• Tell me more about what you're looking for
+• Share your current situation or challenge
+• Ask specific questions
+• Let me know what type of guidance you need
+
+**I can provide:**
+• Step-by-step action plans
+• Personalized advice and strategies
+• Motivation and encouragement
+• Practical tips and techniques
+• Answers to your specific questions
+
+**What would you like to explore or work on?** I'm excited to help you on your journey! 🚀"""
+    
+    def _get_enhanced_guidance_suggestions(self, entities: Dict, user_context: Dict) -> List[str]:
+        """Get enhanced guidance suggestions"""
+        suggestions = []
+        
+        if entities.get('habits'):
+            habit = entities['habits'][0]
+            if habit.lower() in ['exercise', 'workout', 'gym']:
+                suggestions.extend([
+                    "Start with just 5 minutes and gradually increase",
+                    "Schedule exercise at your most energetic time of day",
+                    "Prepare your workout clothes the night before",
+                    "Find an exercise buddy for accountability",
+                    "Track your progress to see improvement"
+                ])
+            elif habit.lower() in ['study', 'learning', 'reading']:
+                suggestions.extend([
+                    "Use the Pomodoro technique (25 min focus, 5 min break)",
+                    "Create a dedicated study space free from distractions",
+                    "Review material within 24 hours for better retention",
+                    "Break large topics into smaller, manageable chunks",
+                    "Teach someone else to reinforce your learning"
+                ])
+            elif habit.lower() in ['meditation', 'mindfulness']:
+                suggestions.extend([
+                    "Start with just 2 minutes of focused breathing",
+                    "Use guided meditation apps for beginners",
+                    "Practice at the same time daily to build routine",
+                    "Find a quiet, comfortable space",
+                    "Be patient - it's a skill that develops over time"
+                ])
+        
+        # Add context-based suggestions
+        if user_context.get('recent_progress') == 'declining':
+            suggestions.append("Consider reducing your goals temporarily to rebuild momentum")
+            suggestions.append("Focus on one habit at a time until it becomes automatic")
+        
+        if user_context.get('habit_streak', 0) > 7:
+            suggestions.append("Great job on your streak! Consider adding a new habit")
+            suggestions.append("Share your success to inspire others")
+        
+        return suggestions[:5]  # Limit to top 5 suggestions
+    
+    def _get_enhanced_habit_suggestions(self, query: str, user_context: Dict) -> List[str]:
+        """Get enhanced habit formation suggestions"""
+        query_lower = query.lower()
+        
+        if 'morning' in query_lower:
+            return [
+                "Start by waking up just 15 minutes earlier",
+                "Begin with making your bed - it's a quick win",
+                "Add a glass of water to start your day hydrated",
+                "Include 2 minutes of gentle stretching",
+                "Write down your top 3 priorities for the day"
+            ]
+        elif 'evening' in query_lower:
+            return [
+                "Dim your lights 1 hour before bedtime",
+                "Create a relaxing bedtime routine",
+                "Avoid screens 30 minutes before sleep",
+                "Prepare your clothes for tomorrow",
+                "Practice gratitude by writing 3 good things"
+            ]
+        elif 'exercise' in query_lower or 'workout' in query_lower:
+            return [
+                "Start with just 5 minutes of movement",
+                "Schedule exercise at your most energetic time",
+                "Prepare everything the night before",
+                "Find an exercise buddy for accountability",
+                "Track your progress to see improvement"
+            ]
+        else:
+            return [
+                "Choose ONE habit to focus on initially",
+                "Start with just 2 minutes daily",
+                "Use habit stacking to link to existing routines",
+                "Track your progress consistently",
+                "Celebrate every small win and milestone"
+            ]
 
 # Example usage and testing
 def main():
