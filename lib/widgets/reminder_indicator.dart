@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:habit_tracker/providers/reminder_provider.dart';
+import 'package:habit_tracker/models/reminder.dart';
 import 'package:habit_tracker/utils/app_theme.dart';
 
 class ReminderIndicator extends StatelessWidget {

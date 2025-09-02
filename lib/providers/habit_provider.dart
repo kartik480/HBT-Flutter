@@ -151,9 +151,7 @@ class HabitProvider extends ChangeNotifier {
     
     // Update habit with new streak data
     final updatedHabit = habit.copyWith(
-      currentStreak: currentStreak,
-      longestStreak: currentStreak > habit.longestStreak ? currentStreak : habit.longestStreak,
-      totalCompletions: habit.completionHistory.values.where((completed) => completed).length,
+      // currentStreak and longestStreak are computed properties, no need to update them
     );
     
     final index = _habits.indexWhere((h) => h.id == habit.id);
@@ -297,8 +295,6 @@ class HabitProvider extends ChangeNotifier {
         targetCount: 1,
         reminderTime: const TimeOfDay(hour: 8, minute: 0),
         createdAt: DateTime.now().subtract(const Duration(days: 7)),
-        currentStreak: 5,
-        longestStreak: 12,
         color: Colors.blue,
         completionHistory: {
           DateTime.now().subtract(const Duration(days: 1)): true,
@@ -317,8 +313,6 @@ class HabitProvider extends ChangeNotifier {
         targetCount: 20,
         reminderTime: const TimeOfDay(hour: 21, minute: 0),
         createdAt: DateTime.now().subtract(const Duration(days: 14)),
-        currentStreak: 8,
-        longestStreak: 25,
         color: Colors.green,
         completionHistory: {
           DateTime.now().subtract(const Duration(days: 1)): true,
@@ -340,8 +334,6 @@ class HabitProvider extends ChangeNotifier {
         targetCount: 8,
         reminderTime: const TimeOfDay(hour: 18, minute: 0),
         createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        currentStreak: 2,
-        longestStreak: 2,
         color: Colors.red,
         completionHistory: {
           DateTime.now().subtract(const Duration(days: 1)): true,
@@ -357,8 +349,6 @@ class HabitProvider extends ChangeNotifier {
         targetCount: 30,
         reminderTime: const TimeOfDay(hour: 19, minute: 0),
         createdAt: DateTime.now().subtract(const Duration(days: 21)),
-        currentStreak: 3,
-        longestStreak: 8,
         color: Colors.purple,
         completionHistory: {
           DateTime.now().subtract(const Duration(days: 7)): true,
@@ -375,8 +365,6 @@ class HabitProvider extends ChangeNotifier {
         targetCount: 15,
         reminderTime: const TimeOfDay(hour: 7, minute: 0),
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        currentStreak: 3,
-        longestStreak: 15,
         color: Colors.orange,
         completionHistory: {
           DateTime.now().subtract(const Duration(days: 1)): true,
